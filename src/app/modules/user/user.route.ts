@@ -6,7 +6,11 @@ import { upload } from "../../utils/multer";
 // import auth from '../../middlewares/auth';
 
 const router = express.Router();
-router.get("/", auth("admin"), UserControllers.getAllUser);
+router.get(
+  "/",
+  auth("admin", "company", "creator", "user"),
+  UserControllers.getAllUser
+);
 router.get("/:id", auth("admin", "user"), UserControllers.getSingleUser);
 
 router.patch("/:id", auth("admin", "user"), UserControllers.updateUser);
