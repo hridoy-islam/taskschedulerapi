@@ -13,6 +13,10 @@ router.get(
 );
 router.get("/:id", auth("admin", "user"), UserControllers.getSingleUser);
 
-router.patch("/:id", auth("admin", "user"), UserControllers.updateUser);
+router.patch(
+  "/:id",
+  auth("admin", "user", "creator", "company"),
+  UserControllers.updateUser
+);
 
 export const UserRoutes = router;

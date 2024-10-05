@@ -9,6 +9,7 @@ export interface TUser {
   password: string;
   role: "user" | "admin" | "company" | "creator";
   status: "block" | "active";
+  company?: Types.ObjectId;
   isDeleted: boolean;
 }
 

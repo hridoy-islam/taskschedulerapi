@@ -4,7 +4,7 @@ import { TUser } from "./user.interface";
 import { User } from "./user.model";
 
 const getAllUserFromDB = async (query: Record<string, unknown>) => {
-  const userQuery = new QueryBuilder(User.find(), query)
+  const userQuery = new QueryBuilder(User.find().populate("company"), query)
     .search(UserSearchableFields)
     .filter()
     .sort()

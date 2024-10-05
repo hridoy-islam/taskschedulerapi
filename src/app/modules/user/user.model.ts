@@ -31,6 +31,9 @@ const userSchema = new Schema<TUser, UserModel>(
       enum: UserStatus,
       default: "active",
     },
+    company: {
+      type: Schema.Types.ObjectId,
+    },
     isDeleted: {
       type: Boolean,
       default: false,
