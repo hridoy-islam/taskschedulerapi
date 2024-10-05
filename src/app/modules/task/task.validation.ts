@@ -7,6 +7,7 @@ const taskValidationSchema = z.object({
   assigned: z.string().optional(),
   status: z.enum(["pending", "completed"]),
   isDeleted: z.boolean().optional(),
+  important: z.boolean().optional(),
   dueDate: z.string().optional(),
 });
 

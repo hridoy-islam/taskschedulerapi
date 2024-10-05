@@ -10,6 +10,7 @@ export interface TUser {
   role: "user" | "admin" | "company" | "creator";
   status: "block" | "active";
   company?: Types.ObjectId;
+  creator?: Types.ObjectId[];
   isDeleted: boolean;
 }
 

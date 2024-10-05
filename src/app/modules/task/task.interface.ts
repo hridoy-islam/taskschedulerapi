@@ -10,6 +10,7 @@ export interface TTask {
   assigned?: Types.ObjectId;
   status: "pending" | "completed";
   isDeleted?: boolean;
+  important?: boolean;
   dueDate?: string;
 }
 

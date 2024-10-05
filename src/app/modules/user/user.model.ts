@@ -33,7 +33,9 @@ const userSchema = new Schema<TUser, UserModel>(
     },
     company: {
       type: Schema.Types.ObjectId,
+      ref: "User",
     },
+    creator: [{ type: Schema.Types.ObjectId, ref: "User" }],
     isDeleted: {
       type: Boolean,
       default: false,
