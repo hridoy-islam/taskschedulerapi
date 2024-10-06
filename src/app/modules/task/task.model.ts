@@ -28,7 +28,7 @@ const taskSchema = new Schema<TTask>(
       default: "pending",
     },
     dueDate: {
-      type: String,
+      type: Date,
     },
     isDeleted: {
       type: Boolean,
@@ -43,5 +43,20 @@ const taskSchema = new Schema<TTask>(
     timestamps: true,
   }
 );
+
+taskSchema.pre<TTask>("save", function (next) {
+  if (!this.dueDate) {
+    this.dueDate = new Date(this.createdAt); // Set dueDate to createdAt
+  }
+  next();
+});
+
+taskSchema.methods.getFormattedDates = function () {
+  return {
+    createdAt: this.createdAt.toISOString(),
+    updatedAt: this.updatedAt.toISOString(),
+    dueDate: this.dueDate ? this.dueDate.toISOString() : null,
+  };
+};
 
 export const Task = model<TTask>("task", taskSchema);

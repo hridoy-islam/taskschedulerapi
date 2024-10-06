@@ -11,7 +11,10 @@ const createTaskIntoDB = async (payload: TTask) => {
 };
 
 const getAllTaskFromDB = async (query: Record<string, unknown>) => {
-  const taskQuery = new QueryBuilder(Task.find(), query)
+  const taskQuery = new QueryBuilder(
+    Task.find().populate("author").populate("assigned"),
+    query
+  )
     .search(TaskSearchableFields)
     .filter()
     .sort()
