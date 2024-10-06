@@ -5,6 +5,7 @@ const taskValidationSchema = z.object({
   description: z.string().optional(),
   author: z.string(),
   assigned: z.string().optional(),
+  company: z.string().optional(),
   status: z.enum(["pending", "completed"]),
   isDeleted: z.boolean().optional(),
   important: z.boolean().optional(),

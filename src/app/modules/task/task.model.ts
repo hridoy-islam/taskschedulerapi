@@ -22,6 +22,10 @@ const taskSchema = new Schema<TTask>(
       type: Schema.Types.ObjectId,
       ref: "User", // Assuming tasks are assigned to users
     },
+    company: {
+      type: Schema.Types.ObjectId,
+      ref: "User", // Assuming tasks are assigned to users
+    },
     status: {
       type: String,
       enum: ["pending", "completed"],

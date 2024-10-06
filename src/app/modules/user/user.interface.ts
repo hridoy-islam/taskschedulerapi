@@ -12,6 +12,7 @@ export interface TUser {
   company?: Types.ObjectId;
   colleagues?: Types.ObjectId[];
   isDeleted: boolean;
+  authroized: boolean;
 }
 
 export interface UserModel extends Model<TUser> {

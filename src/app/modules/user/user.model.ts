@@ -45,6 +45,10 @@ const userSchema = new Schema<TUser, UserModel>(
       type: Boolean,
       default: false,
     },
+    authroized: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
