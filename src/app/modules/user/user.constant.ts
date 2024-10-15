@@ -3,6 +3,7 @@ export const USER_ROLE = {
   admin: "admin",
   company: "company",
   creator: "creator",
+  director: "director",
 } as const;
 
 export const UserStatus = ["block", "active"];

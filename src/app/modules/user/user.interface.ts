@@ -7,7 +7,7 @@ export interface TUser {
   name: string;
   email: string;
   password: string;
-  role: "user" | "admin" | "company" | "creator";
+  role: "user" | "admin" | "company" | "creator" | "director";
   status: "block" | "active";
   company?: Types.ObjectId;
   colleagues?: Types.ObjectId[];

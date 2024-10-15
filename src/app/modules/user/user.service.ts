@@ -35,8 +35,19 @@ const updateUserIntoDB = async (id: string, payload: Partial<TUser>) => {
   return result;
 };
 
+const getAllUserByCompany = async (userId: string) => {
+  const user = await User.findById(userId);
+  if (!user) {
+    return null;
+  }
+
+  const users = await User.find({ company: user.company, isDeleted: false });
+  return users;
+};
+
 export const UserServices = {
   getAllUserFromDB,
   getSingleUserFromDB,
   updateUserIntoDB,
+  getAllUserByCompany,
 };
