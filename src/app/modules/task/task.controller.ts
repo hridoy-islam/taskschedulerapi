@@ -46,9 +46,45 @@ const updateTask = catchAsync(async (req, res) => {
   });
 });
 
+const getTaskForUsers = catchAsync(async (req, res) => {
+  const { authorId, assignedId } = req.params;
+  const result = await TaskServices.getTasksBoth(authorId, assignedId);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Task is Fetched succesfully",
+    data: result,
+  });
+});
+
+const getDueTasks = catchAsync(async (req, res) => {
+  const { assignedId } = req.params;
+  const result = await TaskServices.getDueTasksByUser(assignedId);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Due Task is Fetched succesfully",
+    data: result,
+  });
+});
+
+const getUpcommingTask = catchAsync(async (req, res) => {
+  const { assignedId } = req.params;
+  const result = await TaskServices.getUpcommingTaskByUser(assignedId);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Upcomming Task is Fetched succesfully",
+    data: result,
+  });
+});
+
 export const TaskControllers = {
   getAllTask,
   getSingleTask,
   updateTask,
   createTask,
+  getTaskForUsers,
+  getDueTasks,
+  getUpcommingTask,
 };

@@ -4,8 +4,22 @@ import { TaskSearchableFields } from "./task.constant";
 import { TTask } from "./task.interface";
 import { Task } from "./task.model";
 import AppError from "../../errors/AppError";
+import { User } from "../user/user.model";
+import moment from "moment";
 
 const createTaskIntoDB = async (payload: TTask) => {
+  const author = await User.findById(payload.author);
+  const assigned = await User.findById(payload.assigned);
+  if (!author || !assigned) {
+    return null;
+  }
+
+  if (author._id.toString() === assigned._id.toString()) {
+    payload.company = null;
+  } else {
+    payload.company = assigned.company;
+  }
+
   const result = await Task.create(payload);
   return result;
 };
@@ -74,9 +88,69 @@ const updateTaskIntoDB = async (id: string, payload: Partial<TTask>) => {
   return result;
 };
 
+const getTasksBoth = async (authorId: string, assignedId: string) => {
+  const [authorExists, assignedExists] = await Promise.all([
+    User.exists({ _id: authorId }),
+    User.exists({ _id: assignedId }),
+  ]);
+
+  // If either user does not exist, return empty result
+  if (!authorExists || !assignedExists) {
+    return null;
+  }
+
+  const tasks = await Task.find({
+    $or: [
+      { author: authorId, assigned: assignedId },
+      { author: assignedId, assigned: authorId },
+    ],
+  }).populate("author assigned company");
+
+  return tasks;
+};
+
+const getDueTasksByUser = async (assignedId: string) => {
+  const todayStart = moment().startOf("day").toDate();
+  const tomorrowStart = moment().add(1, "day").startOf("day").toDate();
+
+  const query = {
+    assigned: assignedId, // Filter by assigned ID
+    status: "pending",
+    dueDate: {
+      $lt: tomorrowStart, // Due date is before tomorrow
+    },
+  };
+  const tasks = await Task.find(query)
+    .populate("author assigned company")
+    .exec();
+  return tasks;
+};
+
+const getUpcommingTaskByUser = async (assignedId: string) => {
+  const tomorrowStart = moment().add(1, "days").startOf("day").toDate();
+  // Get the date three days from now and set to the end of that day
+  const threeDaysFromNowEnd = moment().add(3, "days").endOf("day").toDate();
+
+  const query = {
+    assigned: assignedId, // Filter by assigned ID
+    status: "pending",
+    dueDate: {
+      $gte: tomorrowStart, // Due date is today or later
+      $lt: threeDaysFromNowEnd, // Due date is before the end of the third day
+    },
+  };
+  const tasks = await Task.find(query)
+    .populate("author assigned company")
+    .exec();
+  return tasks;
+};
+
 export const TaskServices = {
   getAllTaskFromDB,
   getSingleTaskFromDB,
   updateTaskIntoDB,
   createTaskIntoDB,
+  getTasksBoth,
+  getDueTasksByUser,
+  getUpcommingTaskByUser,
 };

@@ -41,7 +41,13 @@ const getAllUserByCompany = async (userId: string) => {
     return null;
   }
 
-  const users = await User.find({ company: user.company, isDeleted: false });
+  const users = await User.find({
+    company: user.company,
+    isDeleted: false,
+    _id: { $ne: userId }, // Exclude the current user
+  });
+
+  // const users = await User.find({ company: user.company, isDeleted: false });
   return users;
 };
 

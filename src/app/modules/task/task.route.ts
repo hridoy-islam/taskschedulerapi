@@ -22,4 +22,22 @@ router.patch(
   TaskControllers.updateTask
 );
 
+router.get(
+  "/getbothuser/:authorId/:assignedId",
+  auth("admin", "company", "creator", "director", "user"),
+  TaskControllers.getTaskForUsers
+);
+
+router.get(
+  "/duetasks/:assignedId",
+  auth("admin", "company", "creator", "director", "user"),
+  TaskControllers.getDueTasks
+);
+
+router.get(
+  "/upcommingtasks/:assignedId",
+  auth("admin", "company", "creator", "director", "user"),
+  TaskControllers.getUpcommingTask
+);
+
 export const TaskRoutes = router;

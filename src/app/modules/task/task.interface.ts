@@ -8,7 +8,7 @@ export interface TTask {
   description?: string;
   author: Types.ObjectId;
   assigned?: Types.ObjectId;
-  company?: Types.ObjectId;
+  company?: Types.ObjectId | null;
   status: "pending" | "completed";
   isDeleted?: boolean;
   important?: boolean;
