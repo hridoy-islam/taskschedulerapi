@@ -42,7 +42,6 @@ const updateNoteIntoDB = async (id: string, payload: Partial<TNote>) => {
 
 const deleteNoteFromDB = async (id: any) => {
   const result = await Note.findOneAndDelete(id);
-
   return result;
 };
 

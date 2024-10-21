@@ -78,6 +78,57 @@ const getUpcommingTask = catchAsync(async (req, res) => {
     data: result,
   });
 });
+const getTodaysTasks = catchAsync(async (req, res) => {
+  const { userid } = req.params;
+  const result = await TaskServices.getTodaysTaskByUser(userid);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Today's Task is Fetched succesfully",
+    data: result,
+  });
+});
+
+const getPlannerTasks = catchAsync(async (req, res) => {
+  const { year, month, assigned } = req.params;
+  const result = await TaskServices.getTasksForPlannerByMonth(
+    year,
+    month,
+    assigned
+  );
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Planners Monthly Task is Fetched succesfully",
+    data: result,
+  });
+});
+
+const getPlannerTasksByWeek = catchAsync(async (req, res) => {
+  const { year, month, assigned } = req.params;
+  const result = await TaskServices.getTasksForPlannerByWeek(
+    year,
+    month,
+    assigned
+  );
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Planners Weekly Task is Fetched succesfully",
+    data: result,
+  });
+});
+
+const getPlannerTasksByDay = catchAsync(async (req, res) => {
+  const { date, assigned } = req.params;
+  const result = await TaskServices.getTasksForPlannerByDay(date, assigned);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Planners Day Task is Fetched succesfully",
+    data: result,
+  });
+});
 
 export const TaskControllers = {
   getAllTask,
@@ -87,4 +138,8 @@ export const TaskControllers = {
   getTaskForUsers,
   getDueTasks,
   getUpcommingTask,
+  getTodaysTasks,
+  getPlannerTasks,
+  getPlannerTasksByWeek,
+  getPlannerTasksByDay,
 };

@@ -13,6 +13,8 @@ export interface TUser {
   colleagues?: Types.ObjectId[];
   isDeleted: boolean;
   authroized: boolean;
+  address?: string;
+  image?: string;
 }
 
 export interface UserModel extends Model<TUser> {

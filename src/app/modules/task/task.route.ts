@@ -14,7 +14,6 @@ router.post(
   auth("admin", "director", "company", "creator", "user"),
   TaskControllers.createTask
 );
-// router.get("/:id", auth("admin", "user"), UserControllers.getSingleUser);
 
 router.patch(
   "/:id",
@@ -29,6 +28,12 @@ router.get(
 );
 
 router.get(
+  "/today/:userid",
+  auth("admin", "company", "creator", "director", "user"),
+  TaskControllers.getTodaysTasks
+);
+
+router.get(
   "/duetasks/:assignedId",
   auth("admin", "company", "creator", "director", "user"),
   TaskControllers.getDueTasks
@@ -38,6 +43,22 @@ router.get(
   "/upcommingtasks/:assignedId",
   auth("admin", "company", "creator", "director", "user"),
   TaskControllers.getUpcommingTask
+);
+
+router.get(
+  "/planner/:year/:month/:assigned",
+  auth("admin", "company", "creator", "director", "user"),
+  TaskControllers.getPlannerTasks
+);
+router.get(
+  "/planner/week/:year/:week/:assigned",
+  auth("admin", "company", "creator", "director", "user"),
+  TaskControllers.getPlannerTasksByWeek
+);
+router.get(
+  "/planner/day/:date/:assigned",
+  auth("admin", "company", "creator", "director", "user"),
+  TaskControllers.getPlannerTasksByDay
 );
 
 export const TaskRoutes = router;

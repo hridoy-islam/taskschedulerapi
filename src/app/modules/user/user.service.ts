@@ -41,13 +41,19 @@ const getAllUserByCompany = async (userId: string) => {
     return null;
   }
 
-  const users = await User.find({
-    company: user.company,
+  const query: any = {
     isDeleted: false,
     _id: { $ne: userId }, // Exclude the current user
-  });
+  };
 
-  // const users = await User.find({ company: user.company, isDeleted: false });
+  // If user is a 'user' or 'creator', filter by their company
+  if (["user", "creator"].includes(user.role)) {
+    query.company = user.company; // Filter by user's company
+  } else if (user.role === "company") {
+    query.company = user._id; // Use the company user's _id
+  }
+
+  const users = await User.find(query);
   return users;
 };
 

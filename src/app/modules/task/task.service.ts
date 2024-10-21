@@ -145,6 +145,105 @@ const getUpcommingTaskByUser = async (assignedId: string) => {
   return tasks;
 };
 
+const getTodaysTaskByUser = async (userid: string) => {
+  const todayStart = moment().utc().startOf("day").toDate();
+  // End of today in UTC
+  const todayEnd = moment().utc().endOf("day").toDate();
+
+  const query = {
+    assigned: userid, // Filter by assigned ID
+    status: "pending", // Adjust as needed (e.g., include completed tasks if necessary)
+    dueDate: {
+      $gte: todayStart, // Due date is today or later
+      $lt: todayEnd, // Due date is before the end of today
+    },
+  };
+
+  const tasks = await Task.find(query)
+    .populate("author assigned company") // Adjust based on your schema
+    .exec();
+
+  return tasks;
+};
+
+const getTasksForPlannerByMonth = async (
+  year: string,
+  month: string,
+  assigned: string
+) => {
+  const startDate = moment(`${year}-${month}-01`).startOf("month").toDate();
+  const endDate = moment(startDate).endOf("month").toDate();
+
+  const tasks = await Task.find({
+    dueDate: {
+      $gte: startDate,
+      $lt: endDate,
+    },
+    ...(assigned && { assigned }), // Filter by assigned user if provided
+  });
+  return tasks;
+};
+
+const getTasksForPlannerByWeek = async (
+  year: string,
+  week: string,
+  assigned?: string // Optional parameter for filtering by user
+) => {
+  // Parse the week and year as numbers
+  const weekNumber = parseInt(week, 10);
+  const yearNumber = parseInt(year, 10);
+
+  // Validate week number
+  if (isNaN(weekNumber) || weekNumber < 1 || weekNumber > 53) {
+    throw new Error(
+      "Invalid week number. Please provide a number between 1 and 53."
+    );
+  }
+
+  // Validate year number (if necessary)
+  if (isNaN(yearNumber) || yearNumber < 0) {
+    throw new Error("Invalid year. Please provide a valid year.");
+  }
+
+  const startDate = moment()
+    .year(yearNumber)
+    .week(weekNumber)
+    .startOf("isoWeek")
+    .toDate();
+
+  const endDate = moment(startDate).endOf("isoWeek").toDate();
+
+  // Fetch tasks from the database
+  const tasks = await Task.find({
+    dueDate: {
+      $gte: startDate,
+      $lt: endDate,
+    },
+    ...(assigned ? { assigned } : {}), // Filter by assigned user if provided
+  });
+
+  return tasks;
+};
+
+const getTasksForPlannerByDay = async (
+  date: string,
+  assigned?: string // Optional parameter for filtering by user
+) => {
+  const targetDate = moment(date).startOf("day").toDate();
+  const endDate = moment(targetDate).endOf("day").toDate();
+
+  // Fetch tasks from the database
+  const tasks = await Task.find({
+    dueDate: {
+      $gte: targetDate,
+      $lt: endDate,
+    },
+    ...(assigned && { assigned }), // Filter by assigned user if provided
+  });
+
+  return tasks;
+};
+
 export const TaskServices = {
   getAllTaskFromDB,
   getSingleTaskFromDB,
@@ -153,4 +252,8 @@ export const TaskServices = {
   getTasksBoth,
   getDueTasksByUser,
   getUpcommingTaskByUser,
+  getTodaysTaskByUser,
+  getTasksForPlannerByDay,
+  getTasksForPlannerByWeek,
+  getTasksForPlannerByMonth,
 };
