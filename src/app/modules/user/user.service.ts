@@ -26,6 +26,7 @@ const getSingleUserFromDB = async (id: string) => {
 };
 
 const updateUserIntoDB = async (id: string, payload: Partial<TUser>) => {
+  
   const result = await User.findByIdAndUpdate(id, payload, {
     new: true,
     runValidators: true,

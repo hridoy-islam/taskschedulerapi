@@ -49,6 +49,9 @@ const userSchema = new Schema<TUser, UserModel>(
       type: Boolean,
       default: false,
     },
+    address: {
+      type: String,
+    }
   },
   {
     timestamps: true,
