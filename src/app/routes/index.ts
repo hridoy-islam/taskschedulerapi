@@ -3,6 +3,7 @@ import { UserRoutes } from "../modules/user/user.route";
 import { AuthRoutes } from "../modules/auth/auth.router";
 import { TaskRoutes } from "../modules/task/task.route";
 import { NoteRoutes } from "../modules/notes/note.route";
+import { CommentRoutes } from "../modules/comment/comment.route";
 
 const router = Router();
 
@@ -22,6 +23,10 @@ const moduleRoutes = [
   {
     path: "/notes",
     route: NoteRoutes,
+  },
+  {
+    path: "/comment",
+    route: CommentRoutes,
   },
 ];
 

@@ -69,6 +69,17 @@ const getDueTasks = catchAsync(async (req, res) => {
 });
 
 const getUpcommingTask = catchAsync(async (req, res) => {
+  const { authorId } = req.params;
+  const result = await TaskServices.getAssignedTaskByUser(authorId);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Assigned Task is Fetched succesfully",
+    data: result,
+  });
+});
+
+const getAssignedTask = catchAsync(async (req, res) => {
   const { assignedId } = req.params;
   const result = await TaskServices.getUpcommingTaskByUser(assignedId);
   sendResponse(res, {
@@ -78,6 +89,7 @@ const getUpcommingTask = catchAsync(async (req, res) => {
     data: result,
   });
 });
+
 const getTodaysTasks = catchAsync(async (req, res) => {
   const { userid } = req.params;
   const result = await TaskServices.getTodaysTaskByUser(userid);
@@ -142,4 +154,5 @@ export const TaskControllers = {
   getPlannerTasks,
   getPlannerTasksByWeek,
   getPlannerTasksByDay,
+  getAssignedTask
 };

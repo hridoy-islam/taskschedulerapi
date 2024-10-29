@@ -44,6 +44,11 @@ router.get(
   auth("admin", "company", "creator", "director", "user"),
   TaskControllers.getUpcommingTask
 );
+router.get(
+  "/assignedtasks/:authorId",
+  auth("admin", "company", "creator", "director", "user"),
+  TaskControllers.getAssignedTask
+);
 
 router.get(
   "/planner/:year/:month/:assigned",

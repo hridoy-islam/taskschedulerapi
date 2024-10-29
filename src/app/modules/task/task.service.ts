@@ -60,10 +60,10 @@ const updateTaskIntoDB = async (id: string, payload: Partial<TTask>) => {
     // If dueDate exists in the existing task, sum it with the new value
     const existingDueDateInDays = existingTask.dueDate
       ? Math.floor(
-          (new Date(existingTask.dueDate).getTime() -
-            new Date(existingTask.createdAt).getTime()) /
-            (1000 * 60 * 60 * 24)
-        )
+        (new Date(existingTask.dueDate).getTime() -
+          new Date(existingTask.createdAt).getTime()) /
+        (1000 * 60 * 60 * 24)
+      )
       : 0;
 
     // Sum the existing days with the new due date
@@ -129,7 +129,7 @@ const getDueTasksByUser = async (assignedId: string) => {
 const getUpcommingTaskByUser = async (assignedId: string) => {
   const tomorrowStart = moment().add(1, "days").startOf("day").toDate();
   // Get the date three days from now and set to the end of that day
-  const threeDaysFromNowEnd = moment().add(3, "days").endOf("day").toDate();
+  const threeDaysFromNowEnd = moment().add(7, "days").endOf("day").toDate();
 
   const query = {
     assigned: assignedId, // Filter by assigned ID
@@ -144,6 +144,27 @@ const getUpcommingTaskByUser = async (assignedId: string) => {
     .exec();
   return tasks;
 };
+
+
+const getAssignedTaskByUser = async (authorId: string) => {
+  const tomorrowStart = moment().add(1, "days").startOf("day").toDate();
+  const sevenDaysFromNowEnd = moment().add(7, "days").endOf("day").toDate();
+
+  const query = {
+    author: authorId, // Author matches the passed authorId
+    assigned: { $ne: authorId }, // Assigned is not equal to the passed authorId
+    status: "pending", // Assuming you only want pending tasks
+    dueDate: {
+      $gte: tomorrowStart, // Due date is today or later
+      $lt: sevenDaysFromNowEnd, // Due date is before the end of the seventh day
+    },
+  };
+  const tasks = await Task.find(query)
+    .populate("author assigned company")
+    .exec();
+
+  return tasks;
+}
 
 const getTodaysTaskByUser = async (userid: string) => {
   const todayStart = moment().utc().startOf("day").toDate();
@@ -256,4 +277,5 @@ export const TaskServices = {
   getTasksForPlannerByDay,
   getTasksForPlannerByWeek,
   getTasksForPlannerByMonth,
+  getAssignedTaskByUser
 };
