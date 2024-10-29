@@ -6,7 +6,7 @@ const commentSchema = new Schema<TComment>(
     taskId: {
       type: Schema.Types.ObjectId,
       required: true,
-      ref: "Task",
+      ref: "task",
     },
     content: {
       type: String,

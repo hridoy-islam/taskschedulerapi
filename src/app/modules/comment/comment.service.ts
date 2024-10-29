@@ -18,11 +18,12 @@ const createCommentIntoDB = async (payload: TComment) => {
 };
 
 const getCommentsFromDB = async (id: string) => {
-  const result = await Comment.find({taskId: id});
+  const result = await Comment.find({ taskId: id }).populate({
+    path: 'authorId', // Populate the author's ID for the comment
+    select: '_id name' // Select only the ID and name for the author of the comment
+  });
   return result;
 }
-
-
 
 export const CommentServices = {
   createCommentIntoDB,

@@ -69,23 +69,23 @@ const getDueTasks = catchAsync(async (req, res) => {
 });
 
 const getUpcommingTask = catchAsync(async (req, res) => {
-  const { authorId } = req.params;
-  const result = await TaskServices.getAssignedTaskByUser(authorId);
-  sendResponse(res, {
-    statusCode: httpStatus.OK,
-    success: true,
-    message: "Assigned Task is Fetched succesfully",
-    data: result,
-  });
-});
-
-const getAssignedTask = catchAsync(async (req, res) => {
   const { assignedId } = req.params;
   const result = await TaskServices.getUpcommingTaskByUser(assignedId);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
     message: "Upcomming Task is Fetched succesfully",
+    data: result,
+  });
+});
+
+const getAssignedTask = catchAsync(async (req, res) => {
+  const { authorId } = req.params;
+  const result = await TaskServices.getAssignedTaskByUser(authorId);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Asssigned Task is Fetched succesfully",
     data: result,
   });
 });
