@@ -14,7 +14,6 @@ const checkLogin = async (payload: TLogin) => {
     if (!foundUser) {
       throw new AppError(httpStatus.NOT_FOUND, "Login Detials is not correct");
     }
-
     if (foundUser.isDeleted) {
       throw new AppError(
         httpStatus.NOT_FOUND,

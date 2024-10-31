@@ -46,9 +46,21 @@ const getCompanyUser = catchAsync(async (req, res) => {
   });
 });
 
+const assignUser = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  const result = await UserServices.assignUserToDB(id, req.body);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Colleagues Updated Successfully",
+    data: result,
+  });
+});
+
 export const UserControllers = {
   getAllUser,
   getSingleUser,
   updateUser,
   getCompanyUser,
+  assignUser
 };

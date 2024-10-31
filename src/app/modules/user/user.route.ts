@@ -23,6 +23,9 @@ router.patch(
   UserControllers.updateUser
 );
 
+router.patch('/addmember/:id/', auth('admin', 'user', 'creator', 'company', 'director'),UserControllers.assignUser);
+
+
 router.get(
   "/company/:userId",
   auth("admin", "company", "creator", "user", "director"),
