@@ -201,7 +201,8 @@ const getTasksForPlannerByMonth = async (
       $lt: endDate,
     },
     ...(assigned && { assigned }), // Filter by assigned user if provided
-  });
+  }).populate('author', 'name') // Populate only the name field from the author
+  .populate('assigned', 'name');
   return tasks;
 };
 
@@ -210,6 +211,8 @@ const getTasksForPlannerByWeek = async (
   week: string,
   assigned?: string // Optional parameter for filtering by user
 ) => {
+
+  
   // Parse the week and year as numbers
   const weekNumber = parseInt(week, 10);
   const yearNumber = parseInt(year, 10);
@@ -226,13 +229,19 @@ const getTasksForPlannerByWeek = async (
     throw new Error("Invalid year. Please provide a valid year.");
   }
 
-  const startDate = moment()
-    .year(yearNumber)
-    .week(weekNumber)
-    .startOf("isoWeek")
-    .toDate();
+  // const startDate = moment()
+  //   .year(yearNumber)
+  //   .week(weekNumber)
+  //   .startOf("isoWeek")
+  //   .toDate();
+
+  const startDate = moment().year(yearNumber).week(weekNumber).startOf("isoWeek").subtract(1, 'days').toDate();
+
+  console.log(startDate);
 
   const endDate = moment(startDate).endOf("isoWeek").toDate();
+
+  console.log(endDate);
 
   // Fetch tasks from the database
   const tasks = await Task.find({

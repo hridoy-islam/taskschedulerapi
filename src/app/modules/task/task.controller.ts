@@ -117,10 +117,10 @@ const getPlannerTasks = catchAsync(async (req, res) => {
 });
 
 const getPlannerTasksByWeek = catchAsync(async (req, res) => {
-  const { year, month, assigned } = req.params;
+  const { year, week, assigned } = req.params;
   const result = await TaskServices.getTasksForPlannerByWeek(
     year,
-    month,
+    week,
     assigned
   );
   sendResponse(res, {
