@@ -9,7 +9,7 @@ const createNoteIntoDB = async (payload: TNote) => {
 };
 
 const getAllNoteFromDB = async (query: Record<string, unknown>) => {
-  const noteQuery = new QueryBuilder(Note.find().populate("author"), query)
+  const noteQuery = new QueryBuilder(Note.find().populate("author tagId"), query)
     .search(NoteSearchableFields)
     .filter()
     .sort()

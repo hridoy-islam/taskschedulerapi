@@ -48,7 +48,8 @@ const updateTask = catchAsync(async (req, res) => {
 
 const getTaskForUsers = catchAsync(async (req, res) => {
   const { authorId, assignedId } = req.params;
-  const result = await TaskServices.getTasksBoth(authorId, assignedId);
+  const queryParams = req.query;
+  const result = await TaskServices.getTasksBoth(authorId, assignedId, queryParams);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
@@ -59,7 +60,8 @@ const getTaskForUsers = catchAsync(async (req, res) => {
 
 const getDueTasks = catchAsync(async (req, res) => {
   const { assignedId } = req.params;
-  const result = await TaskServices.getDueTasksByUser(assignedId);
+  const queryParams = req.query;
+  const result = await TaskServices.getDueTasksByUser(assignedId, queryParams);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
@@ -70,7 +72,8 @@ const getDueTasks = catchAsync(async (req, res) => {
 
 const getUpcommingTask = catchAsync(async (req, res) => {
   const { assignedId } = req.params;
-  const result = await TaskServices.getUpcommingTaskByUser(assignedId);
+  const queryParams = req.query; 
+  const result = await TaskServices.getUpcommingTaskByUser(assignedId, queryParams);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
@@ -81,7 +84,8 @@ const getUpcommingTask = catchAsync(async (req, res) => {
 
 const getAssignedTask = catchAsync(async (req, res) => {
   const { authorId } = req.params;
-  const result = await TaskServices.getAssignedTaskByUser(authorId);
+  const queryParams = req.query; 
+  const result = await TaskServices.getAssignedTaskByUser(authorId, queryParams);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,

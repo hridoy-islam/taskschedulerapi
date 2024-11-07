@@ -1,10 +1,8 @@
 /* eslint-disable no-unused-vars */
 import { Types } from "mongoose";
 
-export interface TNote {
+export interface TTags {
   _id: Types.ObjectId;
-  title: string;
-  content: string;
+  name: string;
   author: Types.ObjectId;
-  tagId: Types.ObjectId;
 }

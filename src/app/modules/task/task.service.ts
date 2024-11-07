@@ -88,7 +88,7 @@ const updateTaskIntoDB = async (id: string, payload: Partial<TTask>) => {
   return result;
 };
 
-const getTasksBoth = async (authorId: string, assignedId: string) => {
+const getTasksBoth = async (authorId: string, assignedId: string, queryParams: Record<string, any>) => {
   const [authorExists, assignedExists] = await Promise.all([
     User.exists({ _id: authorId }),
     User.exists({ _id: assignedId }),
@@ -99,17 +99,38 @@ const getTasksBoth = async (authorId: string, assignedId: string) => {
     return null;
   }
 
-  const tasks = await Task.find({
-    $or: [
-      { author: authorId, assigned: assignedId },
-      { author: assignedId, assigned: authorId },
-    ],
-  }).populate("author assigned company");
+    // Define the query filters
+    const query = {
+      $or: [
+        { author: authorId, assigned: assignedId },
+        { author: assignedId, assigned: authorId },
+      ],
+      ...queryParams,
+    };
 
-  return tasks;
+  // Use the QueryBuilder to build the query
+  const taskQuery = new QueryBuilder(
+    Task.find().populate("author assigned company"), // Populate relevant fields
+    query // Base query parameters
+  )
+    .search(['taskName']) // Optionally search by task name
+    .filter() // Apply any additional filters from queryParams
+    .paginate() // Handle pagination
+    .sort() // Apply sorting (if needed)
+    .fields(); // Include any specific fields required
+
+  // Get the total count of matching tasks for metadata (pagination info)
+  const meta = await taskQuery.countTotal();
+  // Execute the query to fetch the tasks
+  const result = await taskQuery.modelQuery;
+
+  return {
+    meta,
+    result,
+  };
 };
 
-const getDueTasksByUser = async (assignedId: string) => {
+const getDueTasksByUser = async (assignedId: string, queryParams: Record<string, any>) => {
   const todayStart = moment().startOf("day").toDate();
   const tomorrowStart = moment().add(1, "day").startOf("day").toDate();
 
@@ -119,14 +140,31 @@ const getDueTasksByUser = async (assignedId: string) => {
     dueDate: {
       $lt: tomorrowStart, // Due date is before tomorrow
     },
+    ...queryParams,
   };
-  const tasks = await Task.find(query)
-    .populate("author assigned company")
-    .exec();
-  return tasks;
+
+  // Use the QueryBuilder to build the query
+  const taskQuery = new QueryBuilder(
+    Task.find().populate("author assigned company"),
+    query
+  )
+    .search(['taskName'])
+    .filter() // Apply filters (this will automatically apply the provided `query` object)
+    .paginate() // Handle pagination if necessary
+    .sort() // You can define a sort order as needed
+    .fields(); // Include any specific fields you need
+
+  const meta = await taskQuery.countTotal(); // Get metadata (e.g., total count)
+  const result = await taskQuery.modelQuery; // Get the query result
+
+  return {
+    meta,
+    result,
+  };
 };
 
-const getUpcommingTaskByUser = async (assignedId: string) => {
+
+const getUpcommingTaskByUser = async (assignedId: string, queryParams: Record<string, any>) => {
   const tomorrowStart = moment().add(1, "days").startOf("day").toDate();
   // Get the date three days from now and set to the end of that day
   const threeDaysFromNowEnd = moment().add(7, "days").endOf("day").toDate();
@@ -138,15 +176,31 @@ const getUpcommingTaskByUser = async (assignedId: string) => {
       $gte: tomorrowStart, // Due date is today or later
       $lt: threeDaysFromNowEnd, // Due date is before the end of the third day
     },
+    ...queryParams,
   };
-  const tasks = await Task.find(query)
-    .populate("author assigned company")
-    .exec();
-  return tasks;
+
+  // Use the QueryBuilder to build the query
+  const taskQuery = new QueryBuilder(
+    Task.find().populate("author assigned company"),
+    query
+  )
+    .search(['taskName'])
+    .filter() // Apply filters (this will automatically apply the provided `query` object)
+    .paginate() // Handle pagination if necessary
+    .sort() // You can define a sort order as needed
+    .fields(); // Include any specific fields you need
+
+  const meta = await taskQuery.countTotal(); // Get metadata (e.g., total count)
+  const result = await taskQuery.modelQuery; // Get the query result
+
+  return {
+    meta,
+    result,
+  };
 };
 
 
-const getAssignedTaskByUser = async (authorId: string) => {
+const getAssignedTaskByUser = async (authorId: string, queryParams: Record<string, any>) => {
   const tomorrowStart = moment().add(1, "days").startOf("day").toDate();
   const sevenDaysFromNowEnd = moment().add(7, "days").endOf("day").toDate();
 
@@ -158,12 +212,26 @@ const getAssignedTaskByUser = async (authorId: string) => {
       $gte: tomorrowStart, // Due date is today or later
       $lt: sevenDaysFromNowEnd, // Due date is before the end of the seventh day
     },
+    ...queryParams,
   };
-  const tasks = await Task.find(query)
-    .populate("author assigned company")
-    .exec();
+  // Use the QueryBuilder to build the query
+  const taskQuery = new QueryBuilder(
+    Task.find().populate("author assigned company"),
+    query
+  )
+    .search(['taskName'])
+    .filter() // Apply filters (this will automatically apply the provided `query` object)
+    .paginate() // Handle pagination if necessary
+    .sort() // You can define a sort order as needed
+    .fields(); // Include any specific fields you need
 
-  return tasks;
+  const meta = await taskQuery.countTotal(); // Get metadata (e.g., total count)
+  const result = await taskQuery.modelQuery; // Get the query result
+
+  return {
+    meta,
+    result,
+  };
 }
 
 const getTodaysTaskByUser = async (userid: string) => {

@@ -1,16 +1,12 @@
 /* eslint-disable @typescript-eslint/no-this-alias */
 import { Schema, model } from "mongoose";
-import { TNote } from "./note.interface";
+import { TTags } from "./tags.interface";
 
-const noteSchema = new Schema<TNote>(
+const tagsSchema = new Schema<TTags>(
   {
-    title: {
+    name: {
       type: String,
       required: true,
-      trim: true,
-    },
-    content: {
-      type: String,
       trim: true,
     },
     author: {
@@ -18,14 +14,10 @@ const noteSchema = new Schema<TNote>(
       required: true,
       ref: "User",
     },
-    tagId : {
-      type: Schema.Types.ObjectId,
-      ref: 'Tags'
-    }
   },
   {
     timestamps: true,
   }
 );
 
-export const Note = model<TNote>("notes", noteSchema);
+export const Tags = model<TTags>("tags", tagsSchema);

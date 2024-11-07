@@ -1,3 +1,3 @@
 export const TaskStatus = ["pending", "completed"];
 
-export const TaskSearchableFields = ["author", "assigned"];
+export const TaskSearchableFields = ["taskName"];
