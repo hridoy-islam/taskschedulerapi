@@ -12,52 +12,53 @@ async function main() {
     server = app.listen(config.port, () => {
       console.log(`app is listening on port ${config.port}`);
     });
-    
-const io = require("socket.io")(server, {
-  pingTimeout: 60000,
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST"],
-  },
-});
-
-
-io.on("connection", (socket: any) => {
-  console.log("connected to socket.io");
-  socket.on("setup", (userData: any) => {
-    socket.join(userData._id);
-    // console.log(userData._id);
-    socket.emit("connected");
-  });
-  socket.on("join chat", (room: any) => {
-    socket.join(room);
-    console.log("user joined room " + room);
-  });
-  socket.on("typing", (room: any) => {
-    socket.in(room).emit("typing");
-  });
-  socket.on("stop typing", (room: any) => {
-    socket.in(room).emit("stop typing");
-  });
-
-  socket.on("new message", (newMessageReceived: any) => {
-    var chat = newMessageReceived.chat;
-    if (!chat.users) {
-      return console.log("chat.users not defined");
-    }
-    chat.users.forEach((user: any) => {
-      if (user._id === newMessageReceived.sender._id) {
-        return;
-      }
-      socket.in(user._id).emit("message received", newMessageReceived);
+        
+    const io = require("socket.io")(server, {
+      pingTimeout: 60000,
+      cors: {
+        origin: "*",
+        methods: ["GET", "POST"],
+      },
     });
-  });
-  socket.off("setup", (userData: any) => {
-    console.log("user Disconnected");
-    socket.leave(userData._id);
-  });
 
-});
+
+    io.on("connection", (socket: any) => {
+      console.log("connected to socket.io");
+      socket.on("setup", (userData: any) => {
+        socket.join(userData._id);
+        console.log(userData._id);
+        socket.emit("connected");
+      });
+      socket.on("join chat", (room: any) => {
+        socket.join(room);
+        console.log("user joined room " + room);
+      });
+      socket.on("typing", (room: any) => {
+        socket.in(room).emit("typing");
+      });
+      socket.on("stop typing", (room: any) => {
+        socket.in(room).emit("stop typing");
+      });
+
+      socket.on("new message", (newMessageReceived: any) => {
+        let chat = newMessageReceived?.data?.data;
+        console.log(chat)
+        if (!chat?.authorId) {
+          return console.log("chat.users not defined");
+        }
+        chat?.users?.forEach((user: any) => {
+          if (user?._id === newMessageReceived.sender?._id) {
+            return;
+          }
+          socket.in(user?._id).emit("message received", newMessageReceived);
+        });
+      });
+      socket.off("setup", (userData: any) => {
+        console.log("user Disconnected");
+        socket.leave(userData._id);
+      });
+
+    });
   } catch (err) {
     console.log(err);
   }
