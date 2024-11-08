@@ -43,15 +43,20 @@ async function main() {
       socket.on("new message", (newMessageReceived: any) => {
         let chat = newMessageReceived?.data?.data;
         console.log(chat)
-        if (!chat?.authorId) {
+        if (!chat.authorId) {
           return console.log("chat.users not defined");
         }
-        chat?.users?.forEach((user: any) => {
-          if (user?._id === newMessageReceived.sender?._id) {
-            return;
-          }
-          socket.in(user?._id).emit("message received", newMessageReceived);
-        });
+        // chat?.users?.forEach((user: any) => {
+        //   if (user?._id === newMessageReceived.sender?._id) {
+        //     return;
+        //   }
+        // });
+        else if(chat?.authorId !== chat?.otherUser){
+          
+          socket
+            .in(chat.otherUser)
+            .emit("message received", newMessageReceived);
+        }
       });
       socket.off("setup", (userData: any) => {
         console.log("user Disconnected");

@@ -13,7 +13,20 @@ const createCommentIntoDB = async (payload: TComment) => {
     return null;
   }
 
-  const result = await Comment.create(payload);
+  const data = await Comment.create(payload);
+
+  const users = {
+    creator: task?.author,
+    assigned: task?.assigned,
+    authorId
+  };
+  // check other-User against authorId
+  const otherUser = users.creator.toString() === authorId.toString() ? users.assigned : users.creator;
+
+  const result = {
+    ...data.toObject(),
+    otherUser,
+  };
   return result;
 };
 
