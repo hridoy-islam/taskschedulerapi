@@ -26,7 +26,8 @@ const createCommentIntoDB = async (payload: TComment) => {
   const result = {
     ...data.toObject(),
     otherUser,
-    authorName: author.name
+    authorName: author.name,
+    taskName : task.taskName
   };
   return result;
 };
