@@ -1,1 +1,1 @@
-export const CommentSearchableFields = ["taskId", "authorId", "content"];
+export const CommentSearchableFields = ["taskId", "authorId", "content", "isFile"];

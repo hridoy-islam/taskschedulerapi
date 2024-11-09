@@ -5,7 +5,7 @@ import { Comment } from "./comment.model";
 
 const createCommentIntoDB = async (payload: TComment) => {
 
-  const { taskId, authorId } =  payload;
+  const { taskId, authorId, isFile } = payload;
 
   const task = await Task.findById(taskId);
   const author = await User.findById(authorId);

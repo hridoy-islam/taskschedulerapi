@@ -12,6 +12,10 @@ const commentSchema = new Schema<TComment>(
       type: String,
       required: true,
     },
+    isFile: {
+      type: Boolean,
+      default: false,
+    },
     authorId: {
       type: Schema.Types.ObjectId,
       required: true,
