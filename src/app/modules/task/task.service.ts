@@ -6,6 +6,7 @@ import { Task } from "./task.model";
 import AppError from "../../errors/AppError";
 import { User } from "../user/user.model";
 import moment from "moment";
+import mongoose from "mongoose";
 
 const createTaskIntoDB = async (payload: TTask) => {
   const author = await User.findById(payload.author);
@@ -46,7 +47,17 @@ const getAllTaskFromDB = async (query: Record<string, unknown>) => {
 
 const getSingleTaskFromDB = async (id: string) => {
   const result = await Task.findById(id);
-  return result;
+  const updatedMembers = result?.lastSeen.map((member) => {
+    return {
+      _id: member._id,
+      userId: member.userId,
+      lastMessageReadId: member.lastMessageReadId,
+    };
+  });
+  return {
+    ...result,
+    lastSeen: updatedMembers,
+  };
 };
 const updateTaskIntoDB = async (id: string, payload: Partial<TTask>) => {
   // Fetch the existing task to get its createdAt date
@@ -342,6 +353,44 @@ const getTasksForPlannerByDay = async (
   return tasks;
 };
 
+const updateReadComment = async (
+  taskId: string,
+  userId: string,
+  messageId: string
+) => {
+  // Fetch the group by ID
+  const task = await Task.findById(taskId);
+  if (!task) {
+    throw new AppError(httpStatus.NOT_FOUND, "Group Not Found");
+  }
+
+  // Fetch the user by ID
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, "User Not Found");
+  }
+
+  // Check if the user is a member of the group
+  const isMember = task.lastSeen.find(
+    (member) => member.userId.toString() === userId
+  );
+  if (!isMember) {
+    throw new AppError(httpStatus.BAD_REQUEST, "User is not a member");
+  }
+
+  // Update the user's last read message in the group
+  task.lastSeen = task.lastSeen.map((comment) => {
+    if (comment.userId.toString() === userId) {
+      comment.lastMessageReadId = new mongoose.Types.ObjectId(messageId);
+    }
+    return comment;
+  });
+
+  // Save the updated group
+  const result = await task.save();
+  return result;
+};
+
 export const TaskServices = {
   getAllTaskFromDB,
   getSingleTaskFromDB,
@@ -354,5 +403,6 @@ export const TaskServices = {
   getTasksForPlannerByDay,
   getTasksForPlannerByWeek,
   getTasksForPlannerByMonth,
-  getAssignedTaskByUser
+  getAssignedTaskByUser,
+  updateReadComment,
 };

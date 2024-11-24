@@ -65,5 +65,10 @@ router.get(
   auth("admin", "company", "creator", "director", "user"),
   TaskControllers.getPlannerTasksByDay
 );
+router.patch(
+  "/readcomment",
+  auth("admin", "company", "creator", "director", "user"),
+  TaskControllers.updateReadComment
+);
 
 export const TaskRoutes = router;

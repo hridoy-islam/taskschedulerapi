@@ -146,6 +146,17 @@ const getPlannerTasksByDay = catchAsync(async (req, res) => {
   });
 });
 
+const updateReadComment = catchAsync(async (req, res) => {
+  const { taskId, userId, messageId } = req.body;
+  const result = await TaskServices.updateReadComment(taskId, userId, messageId);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Task is updated succesfully",
+    data: result,
+  });
+});
+
 export const TaskControllers = {
   getAllTask,
   getSingleTask,
@@ -158,5 +169,6 @@ export const TaskControllers = {
   getPlannerTasks,
   getPlannerTasksByWeek,
   getPlannerTasksByDay,
-  getAssignedTask
+  getAssignedTask,
+  updateReadComment,
 };

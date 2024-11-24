@@ -23,7 +23,7 @@ async function main() {
 
 
     io.on("connection", (socket: any) => {
-      console.log("connected to socket.io");
+      // console.log("connected to socket.io");
       socket.on("setup", (userData: any) => {
         socket.join(userData._id);
         // console.log(userData._id);
