@@ -5,6 +5,8 @@ import { TaskRoutes } from "../modules/task/task.route";
 import { NoteRoutes } from "../modules/notes/note.route";
 import { CommentRoutes } from "../modules/comment/comment.route";
 import { TagsRoutes } from "../modules/tags/tags.route";
+import { GroupRoutes } from "../modules/group/group.route";
+import { GroupMessageRoutes } from '../modules/groupMessage/message.route';
 
 const router = Router();
 
@@ -33,6 +35,14 @@ const moduleRoutes = [
     path: "/comment",
     route: CommentRoutes,
   },
+  {
+    path: "/group",
+    route: GroupRoutes,
+  },
+  {
+    path: "/groupMessage",
+    route: GroupMessageRoutes,
+  }
 ];
 
 moduleRoutes.forEach((route) => router.use(route.path, route.route));

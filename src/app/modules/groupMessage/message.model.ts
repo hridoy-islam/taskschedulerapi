@@ -1,7 +1,7 @@
 import { Schema, model } from "mongoose";
-import { TComment } from "./comment.interface";
+import { TGroupMessage } from "./message.interface";
 
-const commentSchema = new Schema<TComment>(
+const GroupMessageSchema = new Schema<TGroupMessage>(
   {
     taskId: {
       type: Schema.Types.ObjectId,
@@ -28,4 +28,4 @@ const commentSchema = new Schema<TComment>(
 );
 
 
-export const Comment = model<TComment>("Comment", commentSchema);
+export const GroupMessage = model<TGroupMessage>("GroupMessage", GroupMessageSchema);

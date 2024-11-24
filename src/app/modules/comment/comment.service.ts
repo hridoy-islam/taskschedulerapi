@@ -5,7 +5,7 @@ import { Comment } from "./comment.model";
 
 const createCommentIntoDB = async (payload: TComment) => {
 
-  const { taskId, authorId } =  payload;
+  const { taskId, authorId, isFile } = payload;
 
   const task = await Task.findById(taskId);
   const author = await User.findById(authorId);
@@ -13,7 +13,22 @@ const createCommentIntoDB = async (payload: TComment) => {
     return null;
   }
 
-  const result = await Comment.create(payload);
+  const data = await Comment.create(payload);
+
+  const users = {
+    creator: task?.author,
+    assigned: task?.assigned,
+    authorId
+  };
+  // check other-User against authorId
+  const otherUser = users.creator.toString() === authorId.toString() ? users.assigned : users.creator;
+
+  const result = {
+    ...data.toObject(),
+    otherUser,
+    authorName: author.name,
+    taskName : task.taskName
+  };
   return result;
 };
 

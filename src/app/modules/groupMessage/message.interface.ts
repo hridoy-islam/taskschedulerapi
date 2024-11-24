@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
 import { Model, Types } from "mongoose";
 
-export interface TComment {
+export interface TGroupMessage {
   _id: Types.ObjectId;
     taskId: Types.ObjectId; // Reference to the task
     authorId: Types.ObjectId; // Reference to the author
