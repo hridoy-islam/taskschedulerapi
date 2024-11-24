@@ -65,7 +65,7 @@ router.get(
   auth("admin", "company", "creator", "director", "user"),
   TaskControllers.getPlannerTasksByDay
 );
-router.patch(
+router.post(
   "/readcomment",
   auth("admin", "company", "creator", "director", "user"),
   TaskControllers.updateReadComment
