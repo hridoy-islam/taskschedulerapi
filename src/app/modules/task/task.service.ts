@@ -371,22 +371,17 @@ const updateReadComment = async (
     throw new AppError(httpStatus.NOT_FOUND, "User Not Found");
   }
 
-  // Check if the user is a member of the group
-  const isMember = task.lastSeen.find(
-    (member) => member.userId.toString() === userId
-  );
-  if (!isMember) {
-    throw new AppError(httpStatus.BAD_REQUEST, "User is not a member");
-  }
 
-  // Update the user's last read message in the group
-  task.lastSeen = task.lastSeen.map((comment) => {
-    if (comment.userId.toString() === userId) {
-      comment.lastMessageReadId = new mongoose.Types.ObjectId(messageId);
-    }
-    return comment;
-  });
-
+  
+ try {
+   // Update the user's last read message in the group
+    if (task.author.toString() === userId) {
+      task.authorLastSeenId = new mongoose.Types.ObjectId(messageId);
+    } else {
+      task.assignedLastSeenId = new mongoose.Types.ObjectId(messageId);
+ } }catch (error) {
+    console.log(error);
+ }
   // Save the updated group
   const result = await task.save();
   return result;

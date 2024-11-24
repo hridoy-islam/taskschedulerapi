@@ -1,20 +1,7 @@
 /* eslint-disable @typescript-eslint/no-this-alias */
 import { Schema, model } from "mongoose";
-import { TLastSeen, TTask } from "./task.interface";
-const lastSeenSchema = new Schema<TLastSeen>(
-  {
-    _id: Schema.Types.ObjectId,
-    userId: {
-      type: Schema.Types.ObjectId,
-      ref: "User", // Assuming there's a User model
-      required: true,
-    },
-    lastMessageReadId: {
-      type: Schema.Types.ObjectId,
-      default: null,
-    },
-  },
-);
+import {  TTask } from "./task.interface";
+
 const taskSchema = new Schema<TTask>(
   {
     taskName: {
@@ -31,7 +18,14 @@ const taskSchema = new Schema<TTask>(
       required: true,
       ref: "User", // Assuming there's a User model
     },
-    lastSeen: [lastSeenSchema],
+    authorLastSeenId: {
+      type: Schema.Types.ObjectId,
+      default: null,
+    },
+    assignedLastSeenId: {
+      type: Schema.Types.ObjectId,
+      default: null,
+    },
 
     assigned: {
       type: Schema.Types.ObjectId,
