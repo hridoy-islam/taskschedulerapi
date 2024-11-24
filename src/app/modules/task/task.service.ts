@@ -47,17 +47,18 @@ const getAllTaskFromDB = async (query: Record<string, unknown>) => {
 
 const getSingleTaskFromDB = async (id: string) => {
   const result = await Task.findById(id);
-  const updatedMembers = result?.lastSeen.map((member) => {
-    return {
-      _id: member._id,
-      userId: member.userId,
-      lastMessageReadId: member.lastMessageReadId,
-    };
-  });
-  return {
-    ...result,
-    lastSeen: updatedMembers,
-  };
+  // const updatedMembers = result?.lastSeen.map((member) => {
+  //   return {
+  //     _id: member._id,
+  //     userId: member.userId,
+  //     lastMessageReadId: member.lastMessageReadId,
+  //   };
+  // });
+  // return {
+  //   ...result,
+  //   lastSeen: updatedMembers,
+  // };
+  return result;
 };
 const updateTaskIntoDB = async (id: string, payload: Partial<TTask>) => {
   // Fetch the existing task to get its createdAt date
