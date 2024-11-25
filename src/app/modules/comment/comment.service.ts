@@ -1,4 +1,5 @@
 import { Task } from "../task/task.model";
+import { TaskServices } from "../task/task.service";
 import { User } from "../user/user.model";
 import { TComment } from "./comment.interface";
 import { Comment } from "./comment.model";
@@ -14,7 +15,20 @@ const createCommentIntoDB = async (payload: TComment) => {
   }
 
   const data = await Comment.create(payload);
-
+  if (data) {
+    const taskId = data?.taskId.toString();
+    const userId = data?.authorId.toString();
+    const messageId = data?._id.toString();
+    try {
+      const task = await TaskServices.updateReadComment(
+        taskId,
+        userId,
+        messageId
+      );
+    } catch (error) {
+      console.error(error);
+    }
+  }
   const users = {
     creator: task?.author,
     assigned: task?.assigned,
@@ -37,6 +51,16 @@ const getCommentsFromDB = async (id: string) => {
     path: 'authorId', // Populate the author's ID for the comment
     select: '_id name' // Select only the ID and name for the author of the comment
   });
+  if (result) {
+    const taskId = id;
+    const userId = result[0]?.authorId?._id.toString();
+    const messageId = result[result.length - 1]._id.toString();
+  try {
+    const task = await TaskServices.updateReadComment(taskId, userId, messageId)
+  } catch (error) {
+    console.error(error);
+  }
+  }
   return result;
 }
 

@@ -7,6 +7,7 @@ import AppError from "../../errors/AppError";
 import { User } from "../user/user.model";
 import moment from "moment";
 import mongoose from "mongoose";
+import { Comment } from "../comment/comment.model";
 
 const createTaskIntoDB = async (payload: TTask) => {
   const author = await User.findById(payload.author);
@@ -20,6 +21,21 @@ const createTaskIntoDB = async (payload: TTask) => {
   } else {
     payload.company = assigned.company;
   }
+
+  const lastSeen = [
+    {
+      _id: new mongoose.Types.ObjectId(),
+      userId: author._id,
+      lastSeenId: null,
+    },
+    {
+      _id: new mongoose.Types.ObjectId(),
+      userId: assigned._id,
+      lastSeenId: null,
+    },
+  ];
+
+  payload.lastSeen = lastSeen;
 
   const result = await Task.create(payload);
   return result;
@@ -99,6 +115,58 @@ const updateTaskIntoDB = async (id: string, payload: Partial<TTask>) => {
 
   return result;
 };
+// get the message count for each group
+  const getUnreadCount = async (data: any) => {
+    const { _id, taskId } = data;
+    const user = await User.findById(_id);
+    if (!user) {
+      throw new AppError(httpStatus.NOT_FOUND, "User not found");
+    }
+    // console.log(`User found: ${user}`);
+
+    // Ensure `user._id` is of type `ObjectId`
+    const userObjectId = mongoose.Types.ObjectId.isValid(_id)
+      ? new mongoose.Types.ObjectId(_id)
+      : null;
+    const taskObjectId = mongoose.Types.ObjectId.isValid(_id)
+      ? new mongoose.Types.ObjectId(taskId)
+      : null;
+
+    if (!userObjectId) {
+      throw new AppError(httpStatus.BAD_REQUEST, "Invalid User ID format");
+    }
+
+    // Fetch tasks where the user is a member
+    // const tasks = await Task.find({
+    //   // "lastSeen.userId": userObjectId,
+    //   _id: taskObjectId,
+    // });
+    const tasks = await Task.find({
+      $and: [{ author: userObjectId }, { assigned: taskObjectId }],
+    });
+
+    console.log(`Tasks found: ${tasks}`);
+
+    const groupWithMessageCount = await Promise.all(
+      tasks.map(async (task: any) => {
+        const member = task.lastSeen.find(
+          (m: any) => m.userId.toString() === userObjectId.toString()
+        );
+        const lastMessageReadId = member ? member.lastSeenId : null;
+
+        const unreadMessageCount = await Comment.countDocuments({
+          taskId: task._id,
+          _id: { $gt: lastMessageReadId },
+        });
+
+        return {
+          ...task.toObject(),
+          unreadMessageCount,
+        };
+      })
+    );
+    return groupWithMessageCount;
+  };
 
 const getTasksBoth = async (authorId: string, assignedId: string, queryParams: Record<string, any>) => {
   const [authorExists, assignedExists] = await Promise.all([
@@ -134,8 +202,25 @@ const getTasksBoth = async (authorId: string, assignedId: string, queryParams: R
   // Get the total count of matching tasks for metadata (pagination info)
   const meta = await taskQuery.countTotal();
   // Execute the query to fetch the tasks
-  const result = await taskQuery.modelQuery;
+  const count = await getUnreadCount({ _id: authorId, taskId: assignedId });
+  const readCount = count.map((c: any) => {
+    return {
+      _id: c._id,
+      unreadMessageCount: c.unreadMessageCount,
+    };
+  }
+  );
 
+  console.log(queryParams);
+  const data2 = await taskQuery.modelQuery;
+  const result = data2.map((task: any) => {
+    const unreadCount = readCount.find((c: any) => c._id.toString() === task._id.toString());
+    return {
+      ...task.toObject(),
+      unreadMessageCount: unreadCount ? unreadCount.unreadMessageCount : 0,
+    };
+  }
+  );
   return {
     meta,
     result,
@@ -371,17 +456,22 @@ const updateReadComment = async (
     throw new AppError(httpStatus.NOT_FOUND, "User Not Found");
   }
 
+  // Check if the user is a member of the group
+  const isMember = task.lastSeen?.find(
+    (t) => t.userId?.toString() === userId
+  );
+  if (!isMember) {
+    throw new AppError(httpStatus.BAD_REQUEST, "User is not a member");
+  }
 
-  
- try {
-   // Update the user's last read message in the group
-    if (task.author.toString() === userId) {
-      task.authorLastSeenId = new mongoose.Types.ObjectId(messageId);
-    } else {
-      task.assignedLastSeenId = new mongoose.Types.ObjectId(messageId);
- } }catch (error) {
-    console.log(error);
- }
+  // Update the user's last read message in the group
+  task.lastSeen = task.lastSeen?.map((member) => {
+    if (member.userId?.toString() === userId) {
+      member.lastSeenId = new mongoose.Types.ObjectId(messageId);
+    }
+    return member;
+  });
+
   // Save the updated group
   const result = await task.save();
   return result;
