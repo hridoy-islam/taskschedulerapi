@@ -142,7 +142,10 @@ const updateTaskIntoDB = async (id: string, payload: Partial<TTask>) => {
     //   _id: taskObjectId,
     // });
     const tasks = await Task.find({
-      $and: [{ author: userObjectId }, { assigned: taskObjectId }],
+      $or: [
+        { author: userObjectId, assigned: taskObjectId },
+        { assigned: userObjectId, author: taskObjectId },
+      ],
     });
 
     console.log(`Tasks found: ${tasks}`);
@@ -211,7 +214,7 @@ const getTasksBoth = async (authorId: string, assignedId: string, queryParams: R
   }
   );
 
-  console.log(queryParams);
+  console.log(authorId + " " + assignedId);
   const data2 = await taskQuery.modelQuery;
   const result = data2.map((task: any) => {
     const unreadCount = readCount.find((c: any) => c._id.toString() === task._id.toString());
