@@ -148,7 +148,60 @@ const updateTaskIntoDB = async (id: string, payload: Partial<TTask>) => {
       ],
     });
 
-    console.log(`Tasks found: ${tasks}`);
+
+    const groupWithMessageCount = await Promise.all(
+      tasks.map(async (task: any) => {
+        const member = task.lastSeen.find(
+          (m: any) => m.userId.toString() === userObjectId.toString()
+        );
+        const lastMessageReadId = member ? member.lastSeenId : null;
+
+        const unreadMessageCount = await Comment.countDocuments({
+          taskId: task._id,
+          _id: { $gt: lastMessageReadId },
+        });
+
+        return {
+          ...task.toObject(),
+          unreadMessageCount,
+        };
+      })
+    );
+    return groupWithMessageCount;
+  };
+
+  const getSingleUserUnreadCount = async (data: any) => {
+    const { _id, type } = data;
+    const user = await User.findById(_id);
+    if (!user) {
+      throw new AppError(httpStatus.NOT_FOUND, "User not found");
+    }
+    // console.log(`User found: ${user}`);
+
+    // Ensure `user._id` is of type `ObjectId`
+    const userObjectId = mongoose.Types.ObjectId.isValid(_id)
+      ? new mongoose.Types.ObjectId(_id)
+      : null;
+
+    if (!userObjectId) {
+      throw new AppError(httpStatus.BAD_REQUEST, "Invalid User ID format");
+    }
+
+    // Fetch tasks where the user is a member
+    // const tasks = await Task.find({
+    //   // "lastSeen.userId": userObjectId,
+    //   _id: taskObjectId,
+    // });
+    let tasks;
+    if (type === "author") {
+      tasks = await Task.find({
+        $or: [{ author: userObjectId }],
+      });
+    } else {
+      tasks = await Task.find({
+        $or: [{ assigned: userObjectId }],
+      });
+    }
 
     const groupWithMessageCount = await Promise.all(
       tasks.map(async (task: any) => {
@@ -214,7 +267,6 @@ const getTasksBoth = async (authorId: string, assignedId: string, queryParams: R
   }
   );
 
-  console.log(authorId + " " + assignedId);
   const data2 = await taskQuery.modelQuery;
   const result = data2.map((task: any) => {
     const unreadCount = readCount.find((c: any) => c._id.toString() === task._id.toString());
@@ -255,7 +307,27 @@ const getDueTasksByUser = async (assignedId: string, queryParams: Record<string,
     .fields(); // Include any specific fields you need
 
   const meta = await taskQuery.countTotal(); // Get metadata (e.g., total count)
-  const result = await taskQuery.modelQuery; // Get the query result
+  const data = await taskQuery.modelQuery; // Get the query result
+
+  // Execute the query to fetch the tasks
+  const count = await getSingleUserUnreadCount({
+    _id: assignedId,
+  });
+  const readCount = count.map((c: any) => {
+    return {
+      _id: c._id,
+      unreadMessageCount: c.unreadMessageCount,
+    };
+  });
+  const result = data.map((task: any) => {
+    const unreadCount = readCount.find(
+      (c: any) => c._id.toString() === task._id.toString()
+    );
+    return {
+      ...task.toObject(),
+      unreadMessageCount: unreadCount ? unreadCount.unreadMessageCount : 0,
+    };
+  });
 
   return {
     meta,
@@ -291,7 +363,27 @@ const getUpcommingTaskByUser = async (assignedId: string, queryParams: Record<st
     .fields(); // Include any specific fields you need
 
   const meta = await taskQuery.countTotal(); // Get metadata (e.g., total count)
-  const result = await taskQuery.modelQuery; // Get the query result
+   const data = await taskQuery.modelQuery; // Get the query result
+
+   // Execute the query to fetch the tasks
+   const count = await getSingleUserUnreadCount({
+     _id: assignedId,
+   });
+   const readCount = count.map((c: any) => {
+     return {
+       _id: c._id,
+       unreadMessageCount: c.unreadMessageCount,
+     };
+   });
+   const result = data.map((task: any) => {
+     const unreadCount = readCount.find(
+       (c: any) => c._id.toString() === task._id.toString()
+     );
+     return {
+       ...task.toObject(),
+       unreadMessageCount: unreadCount ? unreadCount.unreadMessageCount : 0,
+     };
+   });
 
   return {
     meta,
@@ -326,7 +418,29 @@ const getAssignedTaskByUser = async (authorId: string, queryParams: Record<strin
     .fields(); // Include any specific fields you need
 
   const meta = await taskQuery.countTotal(); // Get metadata (e.g., total count)
-  const result = await taskQuery.modelQuery; // Get the query result
+
+   const data = await taskQuery.modelQuery; // Get the query result
+
+   // Execute the query to fetch the tasks
+   const count = await getSingleUserUnreadCount({
+     _id: authorId,
+     type: "author"
+   });
+   const readCount = count.map((c: any) => {
+     return {
+       _id: c._id,
+       unreadMessageCount: c.unreadMessageCount,
+     };
+   });
+   const result = data.map((task: any) => {
+     const unreadCount = readCount.find(
+       (c: any) => c._id.toString() === task._id.toString()
+     );
+     return {
+       ...task.toObject(),
+       unreadMessageCount: unreadCount ? unreadCount.unreadMessageCount : 0,
+     };
+   });
 
   return {
     meta,
@@ -348,11 +462,32 @@ const getTodaysTaskByUser = async (userid: string) => {
     },
   };
 
-  const tasks = await Task.find(query)
+  const data = await Task.find(query)
     .populate("author assigned company") // Adjust based on your schema
     .exec();
 
-  return tasks;
+
+     // Execute the query to fetch the tasks
+     const count = await getSingleUserUnreadCount({
+       _id: userid,
+     });
+     const readCount = count.map((c: any) => {
+       return {
+         _id: c._id,
+         unreadMessageCount: c.unreadMessageCount,
+       };
+     });
+     const result = data.map((task: any) => {
+       const unreadCount = readCount.find(
+         (c: any) => c._id.toString() === task._id.toString()
+       );
+       return {
+         ...task.toObject(),
+         unreadMessageCount: unreadCount ? unreadCount.unreadMessageCount : 0,
+       };
+     });
+
+  return result;
 };
 
 const getTasksForPlannerByMonth = async (
@@ -486,12 +621,13 @@ export const TaskServices = {
   updateTaskIntoDB,
   createTaskIntoDB,
   getTasksBoth,
-  getDueTasksByUser,
-  getUpcommingTaskByUser,
-  getTodaysTaskByUser,
   getTasksForPlannerByDay,
   getTasksForPlannerByWeek,
   getTasksForPlannerByMonth,
-  getAssignedTaskByUser,
   updateReadComment,
+  getDueTasksByUser,
+  getUpcommingTaskByUser,
+  getAssignedTaskByUser,
+  // todo followings
+  getTodaysTaskByUser,
 };
