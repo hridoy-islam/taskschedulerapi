@@ -158,7 +158,7 @@ const updateTaskIntoDB = async (id: string, payload: Partial<TTask>) => {
 
         const unreadMessageCount = await Comment.countDocuments({
           taskId: task._id,
-          ...(lastMessageReadId
+          ...(lastMessageReadId !== null
             ? { _id: { $gt: lastMessageReadId } } // Count messages after the last read ID
             : {}), // Count all messages if lastMessageReadId is null
         });
@@ -214,7 +214,7 @@ const updateTaskIntoDB = async (id: string, payload: Partial<TTask>) => {
 
         const unreadMessageCount = await Comment.countDocuments({
           taskId: task._id,
-          ...(lastMessageReadId
+          ...(lastMessageReadId !== null
             ? { _id: { $gt: lastMessageReadId } } // Count messages after the last read ID
             : {}), // Count all messages if lastMessageReadId is null
         });
