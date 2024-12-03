@@ -27,6 +27,11 @@ const createMessageIntoDB = async (payload: TGroupMessage, requester: any) => {
 
   const data = await GroupMessage.create(payload);
 
+  if (data){
+    // update lastMessageId in task
+    await Group.findByIdAndUpdate(taskId, { lastMessageId: data._id });
+  }
+
   const otherUserArr = task.members.filter(
     (member) => member._id.toString() !== authorId.toString()
   );

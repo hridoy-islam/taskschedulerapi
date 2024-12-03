@@ -29,6 +29,12 @@ const createCommentIntoDB = async (payload: TComment) => {
   //     console.error(error);
   //   }
   // }
+
+  if (data){
+    // update lastMessageId in task
+    await Task.findByIdAndUpdate(taskId, { lastMessageId: data._id });
+  }
+
   const users = {
     creator: task?.author,
     assigned: task?.assigned,

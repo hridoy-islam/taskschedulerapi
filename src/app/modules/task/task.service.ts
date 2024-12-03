@@ -249,15 +249,18 @@ const getTasksBoth = async (authorId: string, assignedId: string, queryParams: R
     };
 
   // Use the QueryBuilder to build the query
-  const taskQuery = new QueryBuilder(
-    Task.find().populate("author assigned company"), // Populate relevant fields
-    query // Base query parameters
-  )
-    .search(['taskName']) // Optionally search by task name
+  const taskQuery = 
+     new QueryBuilder(
+      Task.find().populate("author assigned company"), // Populate relevant fields
+      query // Base query parameters
+    )
+    .unread( authorId, assignedId)
+    .search(["taskName"]) // Optionally search by task name
     .filter() // Apply any additional filters from queryParams
     .paginate() // Handle pagination
     .sort() // Apply sorting (if needed)
     .fields(); // Include any specific fields required
+
 
   // Get the total count of matching tasks for metadata (pagination info)
   const meta = await taskQuery.countTotal();

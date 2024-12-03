@@ -63,6 +63,10 @@ const taskSchema = new Schema<TTask>(
       type: Boolean,
       default: false,
     },
+    lastMessageId: {
+      type: Schema.Types.ObjectId,
+      default: null,
+    },
   },
   {
     timestamps: true,

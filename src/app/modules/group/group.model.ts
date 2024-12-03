@@ -26,7 +26,6 @@ const membersSchema = new Schema<TGroupMember>({
 });
 const groupSchema = new Schema<TGroup>(
   {
-    
     groupName: {
       type: String,
       required: true,
@@ -51,6 +50,10 @@ const groupSchema = new Schema<TGroup>(
       default: "active",
     },
     members: [membersSchema],
+    lastMessageId: {
+      type: Schema.Types.ObjectId,
+      default: null,
+    },
   },
   {
     timestamps: true,
