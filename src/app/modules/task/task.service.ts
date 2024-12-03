@@ -290,14 +290,34 @@ const getDueTasksByUser = async (assignedId: string, queryParams: Record<string,
   const todayStart = moment().startOf("day").toDate();
   const tomorrowStart = moment().add(1, "day").startOf("day").toDate();
 
-  const query = {
+    // Check if date range is provided in queryParams
+  const { start, end } = queryParams.dateRange || {};
+  const startDate = start ? moment(start).startOf('day').toDate() : null;
+  const endDate = end ? moment(end).endOf('day').toDate() : null;
+
+
+  const query: {
+    assigned: string;
+    status: string;
+    dueDate: { $lt?: Date; $gte?: Date; $lte?: Date };
+    [key: string]: any;
+  } = {
     assigned: assignedId, // Filter by assigned ID
     status: "pending",
     dueDate: {
-      $lt: tomorrowStart, // Due date is before tomorrow
+      $lt: tomorrowStart, // Default filter: Due date is before tomorrow
     },
     ...queryParams,
   };
+
+  // Add additional filters for date range
+  // if (startDate) {
+  //   query.dueDate.$gte = startDate; // Add $gte for startDate
+  // }
+  // if (endDate) {
+  //   query.dueDate.$lte = endDate; // Add $lte for endDate
+  // }
+
 
   // Use the QueryBuilder to build the query
   const taskQuery = new QueryBuilder(

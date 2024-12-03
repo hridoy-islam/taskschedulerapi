@@ -29,6 +29,24 @@ const getSingleUserFromDB = async (id: string) => {
 
 const updateUserIntoDB = async (id: string, payload: Partial<TUser>) => {
 
+  const user = await User.findById(id);
+
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, "User not found");
+  }
+
+  // Toggle `isDeleted` status
+  const newStatus = !user.isDeleted;
+
+  // Check if the user is a company
+  if (user.role === "company") {
+    // Toggle the `isDeleted` status for all members of this company
+    await User.updateMany(
+      { company: user._id }, // Filter members assigned to this company
+      { isDeleted: newStatus } // Set the new `isDeleted` status
+    );
+  }
+
   const result = await User.findByIdAndUpdate(id, payload, {
     new: true,
     runValidators: true,
