@@ -51,6 +51,9 @@ const userSchema = new Schema<TUser, UserModel>(
     },
     address: {
       type: String,
+    },
+    phone: {
+      type: String,
     }
   },
   {

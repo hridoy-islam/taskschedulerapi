@@ -15,6 +15,7 @@ export interface TUser {
   authroized: boolean;
   address?: string;
   image?: string;
+  phone?:string;
 }
 
 export interface UserModel extends Model<TUser> {
