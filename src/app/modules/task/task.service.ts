@@ -246,7 +246,6 @@ const getTasksBoth = async (authorId: string, assignedId: string, queryParams: R
     delete queryParams.getAll;
   }
 
-  console.log(queryParams);
 
     // Define the query filters
     const query = {
