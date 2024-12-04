@@ -8,6 +8,7 @@ import { User } from "../user/user.model";
 import moment from "moment";
 import mongoose from "mongoose";
 import { Comment } from "../comment/comment.model";
+import { GetList } from "../../builder/QueryBuilder2";
 
 const createTaskIntoDB = async (payload: TTask) => {
   const author = await User.findById(payload.author);
@@ -254,7 +255,6 @@ const getTasksBoth = async (authorId: string, assignedId: string, queryParams: R
       Task.find().populate("author assigned company"), // Populate relevant fields
       query // Base query parameters
     )
-    .unread( authorId, assignedId)
     .search(["taskName"]) // Optionally search by task name
     .filter() // Apply any additional filters from queryParams
     .paginate() // Handle pagination
@@ -264,25 +264,34 @@ const getTasksBoth = async (authorId: string, assignedId: string, queryParams: R
 
   // Get the total count of matching tasks for metadata (pagination info)
   const meta = await taskQuery.countTotal();
-  // Execute the query to fetch the tasks
   const count = await getUnreadCount({ _id: authorId, taskId: assignedId });
-  const readCount = count.map((c: any) => {
-    return {
-      _id: c._id,
-      unreadMessageCount: c.unreadMessageCount,
-    };
-  }
-  );
+  
+  const sortBy = queryParams.sort;
+  // console.log("BothUserSortedData", BothUserSortedData);
+  
+  const isGetAll = queryParams.getAll === false ? false : true;
+  let BothUserSortedData;
+  
+  isGetAll ?
+   (BothUserSortedData = await taskQuery.modelQuery) :
+   (BothUserSortedData = await GetList(Task, authorId, assignedId, sortBy));
 
-  const data2 = await taskQuery.modelQuery;
-  const result = data2.map((task: any) => {
-    const unreadCount = readCount.find((c: any) => c._id.toString() === task._id.toString());
-    return {
-      ...task.toObject(),
-      unreadMessageCount: unreadCount ? unreadCount.unreadMessageCount : 0,
-    };
-  }
-  );
+  const result = BothUserSortedData.map((task: any) => {
+    const unreadCount = count.find(
+      (c: any) => c._id.toString() === task._id.toString()
+    );
+    if (isGetAll){
+      return {
+        ...task.toObject(),
+        unreadMessageCount: unreadCount ? unreadCount.unreadMessageCount : 0,
+      };
+    }
+    else return {
+        ...task,
+        unreadMessageCount: unreadCount ? unreadCount.unreadMessageCount : 0,
+      };
+  });
+
   return {
     meta,
     result,
