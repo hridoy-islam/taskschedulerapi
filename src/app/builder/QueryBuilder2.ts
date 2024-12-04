@@ -2,11 +2,13 @@ import mongoose from "mongoose";
 
 export async function GetList(
   messageModel: any,
+  queryParams: any,
   readerId: string | null,
-  assignedTo: string | null,
-  sort: string | null
+  assignedTo: string | null
 ) {
   // Validate `readerId` and `assignedTo` as ObjectIds
+  const { page = 1, limit = 10, searchTerm, sort } = queryParams;
+
   if (!readerId || !mongoose.Types.ObjectId.isValid(readerId)) {
     console.error("Invalid or missing readerId");
     return [];
@@ -29,6 +31,9 @@ export async function GetList(
   // Determine the sort criteria
   const sortField = sort && sort.startsWith("-") ? sort.substring(1) : sort;
   const sortOrder = sort && sort.startsWith("-") ? -1 : 1;
+
+  // Calculate skip and limit for pagination
+  const skip = (Number(page) - 1) * Number(limit);
 
   // Aggregation pipeline
   const tasks = await messageModel
@@ -113,6 +118,10 @@ export async function GetList(
 
       // Apply sorting
       { $sort: { [sortField || "createdAt"]: sortOrder } },
+
+      // Apply pagination
+      { $skip: skip },
+      { $limit: Number(limit) },
     ])
     .exec();
 

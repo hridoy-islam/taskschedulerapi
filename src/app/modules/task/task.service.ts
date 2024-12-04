@@ -272,15 +272,18 @@ const getTasksBoth = async (authorId: string, assignedId: string, queryParams: R
   // Get the total count of matching tasks for metadata (pagination info)
   const count = await getUnreadCount({ _id: authorId, taskId: assignedId });
   
-  const sortBy = queryParams.sort;
-  // console.log("BothUserSortedData", BothUserSortedData);
   
   
   let BothUserSortedData = [];
   
-  isGetAll === false ?
-  (BothUserSortedData = await GetList(Task, authorId, assignedId, sortBy)):
-    (BothUserSortedData = await taskQuery.modelQuery) ;
+  isGetAll === false
+    ? (BothUserSortedData = await GetList(
+        Task,
+        queryParams,
+        authorId,
+        assignedId,
+      ))
+    : (BothUserSortedData = await taskQuery.modelQuery);
     
 
   const result = BothUserSortedData.map((task: any) => {
