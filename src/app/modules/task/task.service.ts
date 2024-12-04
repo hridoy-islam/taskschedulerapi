@@ -240,6 +240,14 @@ const getTasksBoth = async (authorId: string, assignedId: string, queryParams: R
     return null;
   }
 
+  const isGetAll = queryParams?.getAll === "false" ? false : true;
+
+  if (isGetAll === true) {
+    delete queryParams.getAll;
+  }
+
+  console.log(queryParams);
+
     // Define the query filters
     const query = {
       $or: [
@@ -263,35 +271,37 @@ const getTasksBoth = async (authorId: string, assignedId: string, queryParams: R
 
 
   // Get the total count of matching tasks for metadata (pagination info)
-  const meta = await taskQuery.countTotal();
   const count = await getUnreadCount({ _id: authorId, taskId: assignedId });
   
   const sortBy = queryParams.sort;
   // console.log("BothUserSortedData", BothUserSortedData);
   
-  const isGetAll = queryParams.getAll === false ? false : true;
-  let BothUserSortedData;
   
-  isGetAll ?
-   (BothUserSortedData = await taskQuery.modelQuery) :
-   (BothUserSortedData = await GetList(Task, authorId, assignedId, sortBy));
+  let BothUserSortedData = [];
+  
+  isGetAll === false ?
+  (BothUserSortedData = await GetList(Task, authorId, assignedId, sortBy)):
+    (BothUserSortedData = await taskQuery.modelQuery) ;
+    
 
   const result = BothUserSortedData.map((task: any) => {
     const unreadCount = count.find(
       (c: any) => c._id.toString() === task._id.toString()
     );
-    if (isGetAll){
+    if (isGetAll === true){
       return {
         ...task.toObject(),
         unreadMessageCount: unreadCount ? unreadCount.unreadMessageCount : 0,
       };
     }
-    else return {
+    else if (isGetAll === false)
+      {return {
         ...task,
         unreadMessageCount: unreadCount ? unreadCount.unreadMessageCount : 0,
-      };
+      };}
   });
-
+  
+  const meta = await taskQuery.countTotal();
   return {
     meta,
     result,
