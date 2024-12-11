@@ -45,7 +45,7 @@ const checkLogin = async (payload: TLogin) => {
     }
 };
 
-const googleLogin = async (payload: { email: string; name: string; googleUid: string, image?: string, phone?: string }) => {
+const googleLogin = async (payload: { email: string; name: string; password: string, googleUid: string, image?: string, phone?: string }) => {
     try {
         // Check if the user exists
         const foundUser = await User.isUserExists(payload.email);
@@ -55,6 +55,7 @@ const googleLogin = async (payload: { email: string; name: string; googleUid: st
             const newUser = await User.create({
                 email: payload.email,
                 name: payload.name,
+                password: payload.password,
                 googleUid: payload.googleUid,
                 image: payload.image,
                 phone: payload.phone,
