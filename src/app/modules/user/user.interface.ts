@@ -6,7 +6,7 @@ export interface TUser {
   _id: Types.ObjectId;
   name: string;
   email: string;
-  password?: string;
+  password: string;
   role: "user" | "admin" | "company" | "creator" | "director";
   status: "block" | "active";
   company?: Types.ObjectId;
