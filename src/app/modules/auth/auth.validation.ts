@@ -28,6 +28,8 @@ const googleValidationSchema = z.object({
     name: z.string({ required_error: "User Name is Required" }),
     email: z.string({ required_error: "User Email is Required" }),
     googleUid: z.string({ required_error: "google UID required" }),
+    image: z.string().optional(),
+    phone: z.string().optional(),
   }),
 });
 

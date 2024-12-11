@@ -6,16 +6,17 @@ export interface TUser {
   _id: Types.ObjectId;
   name: string;
   email: string;
-  password: string;
+  password?: string;
   role: "user" | "admin" | "company" | "creator" | "director";
   status: "block" | "active";
   company?: Types.ObjectId;
   colleagues?: Types.ObjectId[];
   isDeleted: boolean;
-  authroized: boolean;
+  authorized: boolean;
   address?: string;
   image?: string;
-  phone?:string;
+  phone?: string;
+  googleUid?: string
 }
 
 export interface UserModel extends Model<TUser> {
