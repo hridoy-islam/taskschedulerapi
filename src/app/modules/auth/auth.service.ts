@@ -142,8 +142,6 @@ const forgetPasswordOtp = async (email: string) => {
     throw new AppError(httpStatus.NOT_FOUND, "This user is not found !");
   }
 
-
-
 };
 
 const resetPassword = async (

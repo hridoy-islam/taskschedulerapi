@@ -40,7 +40,7 @@ const createGroupIntoDB = async (payload: TGroup, requester : any) => {
     ...payload,
     members: membersWithRole,
   });
-
+  
   return result;
 };
 

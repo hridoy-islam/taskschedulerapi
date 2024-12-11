@@ -46,7 +46,7 @@ const createTaskIntoDB = async (payload: TTask) => {
     userId: assigned._id, // User receiving the notification
     senderId: author._id, // User creating the task
     type: "task",
-    message: `New Task`
+    message: `${author.name} assigned a new task "${result.taskName}"`
   });
 
   // Step 3: Send the notification in real-time using WebSocket
