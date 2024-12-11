@@ -18,13 +18,15 @@ const userSchema = new Schema<TUser, UserModel>(
     },
     password: {
       type: String,
-      required: true,
       select: 0,
     },
     role: {
       type: String,
       enum: ["user", "admin", "company", "creator", "director"],
       default: "user",
+    },
+    image: {
+      type: String,
     },
     status: {
       type: String,
@@ -45,7 +47,7 @@ const userSchema = new Schema<TUser, UserModel>(
       type: Boolean,
       default: false,
     },
-    authroized: {
+    authorized: {
       type: Boolean,
       default: false,
     },
@@ -54,7 +56,10 @@ const userSchema = new Schema<TUser, UserModel>(
     },
     phone: {
       type: String,
-    }
+    },
+    googleUid: {
+      type: String,
+    },
   },
   {
     timestamps: true,
