@@ -21,6 +21,23 @@ const login = catchAsync(async (req, res) => {
   });
 });
 
+const googleLoginController = catchAsync(async (req, res) => {
+  const result = await AuthServices.googleLogin(req.body);
+  const { accessToken } = result;
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Logged in successfully using Google",
+    data: {
+      accessToken,
+    },
+  });
+});
+
+
+
+
 const createUser = catchAsync(async (req, res) => {
   const result = await AuthServices.createUserIntoDB(req.body);
   sendResponse(res, {
@@ -33,11 +50,11 @@ const createUser = catchAsync(async (req, res) => {
 
 const forgetPassword = catchAsync(async (req, res) => {
   const email = req.body.email;
-  const result = await AuthServices.forgetPassword(email);
+  const result = await AuthServices.forgetPasswordOtp(email);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: "Reset link is generated succesfully!",
+    message: "OTP Code is generated succesfully!",
     data: result,
   });
 });
@@ -58,4 +75,5 @@ export const AuthControllers = {
   createUser,
   forgetPassword,
   resetPassword,
+  googleLoginController
 };

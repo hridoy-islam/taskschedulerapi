@@ -7,6 +7,7 @@ import { CommentRoutes } from "../modules/comment/comment.route";
 import { TagsRoutes } from "../modules/tags/tags.route";
 import { GroupRoutes } from "../modules/group/group.route";
 import { GroupMessageRoutes } from '../modules/groupMessage/message.route';
+import { NotificationsRoutes } from "../modules/notification/notification.route";
 
 const router = Router();
 
@@ -42,7 +43,11 @@ const moduleRoutes = [
   {
     path: "/groupMessage",
     route: GroupMessageRoutes,
-  }
+  },
+  {
+    path: "/notifications",
+    route: NotificationsRoutes,
+  },
 ];
 
 moduleRoutes.forEach((route) => router.use(route.path, route.route));

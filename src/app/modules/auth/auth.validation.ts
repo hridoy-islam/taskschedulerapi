@@ -23,8 +23,19 @@ const createUserValidationSchema = z.object({
   }),
 });
 
+const googleValidationSchema = z.object({
+  body: z.object({
+    name: z.string({ required_error: "User Name is Required" }),
+    email: z.string({ required_error: "User Email is Required" }),
+    googleUid: z.string({ required_error: "google UID required" }),
+  }),
+});
+
+
+
 export const AuthValidations = {
   loginValidationSchema,
   forgetPasswordValidationSchema,
   createUserValidationSchema,
+  googleValidationSchema
 };

@@ -11,6 +11,13 @@ router.post(
   validateRequest(AuthValidations.loginValidationSchema),
   AuthControllers.login
 );
+
+router.post(
+  "/google",
+  validateRequest(AuthValidations.googleValidationSchema),
+  AuthControllers.googleLoginController
+);
+
 router.post(
   "/signup",
   validateRequest(AuthValidations.createUserValidationSchema),
@@ -23,7 +30,7 @@ router.post(
 //   AuthControllers.createUser,
 // );
 router.post(
-  "/forget-password",
+  "/forget",
   validateRequest(AuthValidations.forgetPasswordValidationSchema),
   AuthControllers.forgetPassword
 );

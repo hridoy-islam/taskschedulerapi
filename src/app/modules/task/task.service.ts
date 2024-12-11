@@ -8,6 +8,8 @@ import { User } from "../user/user.model";
 import moment from "moment";
 import mongoose from "mongoose";
 import { Comment } from "../comment/comment.model";
+import { NotificationService } from "../notification/notification.service";
+import { getIO } from "../../../socket";
 
 const createTaskIntoDB = async (payload: TTask) => {
   const author = await User.findById(payload.author);
@@ -38,6 +40,20 @@ const createTaskIntoDB = async (payload: TTask) => {
   payload.lastSeen = lastSeen;
 
   const result = await Task.create(payload);
+
+  // Step 2: Create a notification for the assigned user
+  const notification = await NotificationService.createNotificationIntoDB({
+    userId: assigned._id, // User receiving the notification
+    senderId: author._id, // User creating the task
+    type: "task",
+    message: `New Task`
+  });
+
+  // Step 3: Send the notification in real-time using WebSocket
+  const io = getIO();
+  const assignedId = assigned._id.toString(); // Convert ObjectId to string
+  io.to(assignedId).emit("notification", notification);
+
   return result;
 };
 
