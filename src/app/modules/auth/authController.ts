@@ -2,6 +2,7 @@ import httpStatus from "http-status";
 import catchAsync from "../../utils/catchAsync";
 import sendResponse from "../../utils/sendResponse";
 import { AuthServices } from "./auth.service";
+import { sendEmail } from "../../utils/sendEmail";
 
 const login = catchAsync(async (req, res) => {
   const result = await AuthServices.checkLogin(req.body);
@@ -40,6 +41,9 @@ const googleLoginController = catchAsync(async (req, res) => {
 
 const createUser = catchAsync(async (req, res) => {
   const result = await AuthServices.createUserIntoDB(req.body);
+  // send welcome email to user
+  await sendEmail("me.mrsajib@gmail.com", "hello");
+
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
