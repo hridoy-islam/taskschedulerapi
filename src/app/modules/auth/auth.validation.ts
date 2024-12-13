@@ -35,10 +35,19 @@ const googleValidationSchema = z.object({
 });
 
 
+const validateOtpSchema = z.object({
+  body: z.object({
+    email: z.string().email('Invalid email address'),
+    otp: z.string().length(4, 'OTP must be exactly 4 digits'),
+  }),
+});
+
+
 
 export const AuthValidations = {
   loginValidationSchema,
   forgetPasswordValidationSchema,
   createUserValidationSchema,
-  googleValidationSchema
+  googleValidationSchema,
+  validateOtpSchema
 };

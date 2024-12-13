@@ -16,7 +16,7 @@ export interface TUser {
   address?: string;
   image?: string;
   phone?: string;
-  googleUid?: string
+  googleUid?: string;
 }
 
 export interface UserModel extends Model<TUser> {

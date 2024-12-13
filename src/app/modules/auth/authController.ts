@@ -3,6 +3,7 @@ import catchAsync from "../../utils/catchAsync";
 import sendResponse from "../../utils/sendResponse";
 import { AuthServices } from "./auth.service";
 import { sendEmail } from "../../utils/sendEmail";
+import { PasswordResetServices } from "../passwordReset/passwordReset.service";
 
 const login = catchAsync(async (req, res) => {
   const result = await AuthServices.checkLogin(req.body);
@@ -54,11 +55,23 @@ const createUser = catchAsync(async (req, res) => {
 
 const forgetPassword = catchAsync(async (req, res) => {
   const email = req.body.email;
-  const result = await AuthServices.forgetPasswordOtp(email);
+  const result = await PasswordResetServices.requestOtp(email);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
     message: "OTP Code is generated succesfully!",
+    data: result,
+  });
+});
+
+const validate = catchAsync(async (req, res) => {
+  const email = req.body.email;
+  const otp = req.body.otp;
+  const result = await PasswordResetServices.validateOtp(email, otp);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "OTP Code is validated succesfully!",
     data: result,
   });
 });
@@ -79,5 +92,6 @@ export const AuthControllers = {
   createUser,
   forgetPassword,
   resetPassword,
-  googleLoginController
+  googleLoginController,
+  validate
 };
