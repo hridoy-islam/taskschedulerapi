@@ -15,7 +15,6 @@ const requestOtp = async (email: string) => {
   // Step 1: Delete all previous unused OTPs for this user
   await PasswordReset.deleteMany({
     userId: foundUser._id,
-    isUsed: false, // Only delete unused OTPs
   });
 
   const otp = Math.floor(1000 + Math.random() * 9000).toString(); // Generate 4-digit OTP
@@ -49,7 +48,9 @@ const validateOtp = async (email: string, otp: string) => {
     isUsed: false,
   })
 
-  if (!passwordReset) {
+  
+
+  if (!passwordReset || passwordReset.otp !== otp) {
     throw new AppError(httpStatus.NOT_FOUND, "Invalid OTP");
   }
 
