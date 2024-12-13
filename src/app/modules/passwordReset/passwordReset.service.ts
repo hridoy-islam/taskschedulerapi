@@ -5,6 +5,7 @@ import jwt from "jsonwebtoken";
 import httpStatus from "http-status";
 import AppError from "../../errors/AppError";
 import config from "../../config";
+import { sendEmail } from "../../utils/sendEmail";
 
 const requestOtp = async (email: string) => {
   const foundUser = await User.isUserExists(email);
@@ -28,11 +29,10 @@ const requestOtp = async (email: string) => {
     isUsed: false,
   });
 
-  //   const emailSubject = 'Your Password Reset OTP';
+  const emailSubject = 'Your Password Reset OTP';
   //   const emailBody = `Your OTP for password reset is: ${otp}. It is valid for 10 minutes.`;
 
-  //   await sendEmail(email, emailSubject, emailBody);
-
+  await sendEmail(email, 'reset_password_template', emailSubject, foundUser.name, otp);
 };
 
 
@@ -73,7 +73,7 @@ const validateOtp = async (email: string, otp: string) => {
     `${config.jwt_access_secret}`,
     { expiresIn: "10m" }
   );
-
+  // send email
   return { resetToken };
 };
 

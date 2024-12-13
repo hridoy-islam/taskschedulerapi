@@ -2,7 +2,7 @@ import nodemailer from 'nodemailer';
 import ejs from 'ejs';
 import config from '../config';
 
-export const sendEmail = async (to: string, html: string) => {
+export const sendEmail = async (to: string, template: string, subject: string, username: string, otp: string) => {
   const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com.',
     port: 587,
@@ -14,14 +14,14 @@ export const sendEmail = async (to: string, html: string) => {
     },
   });
 
-  ejs.renderFile(__dirname + "/../static/email_template/reset_password_template.ejs", { name: "Ridoy", support_url: "https://taskplanner.co.uk", action_url: "https://taskplanner.co.uk/login", login_url: "https://taskplanner.co.uk/login", username: "Ridoy" }, function (err, data) {
+  ejs.renderFile(__dirname + "/../static/email_template/" + template + ".ejs", { name: username, support_url: "https://taskplanner.co.uk", action_url: "https://taskplanner.co.uk/login", login_url: "https://taskplanner.co.uk/login", username, otp }, function (err, data) {
     if (err) {
       console.log(err);
     } else {
       var mainOptions = {
         from: "me.mrsajib@gmail.com",
         to,
-        subject: "Welcome to Task Planner",
+        subject,
         html: data,
       };
       transporter.sendMail(mainOptions, function (err, info) {
