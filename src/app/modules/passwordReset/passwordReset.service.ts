@@ -74,6 +74,7 @@ const validateOtp = async (email: string, otp: string) => {
     { expiresIn: "10m" }
   );
   // send email
+  await sendEmail(email, 'validated_otp_template', "OTP Validated Successfully", foundUser.name);
   return { resetToken };
 };
 
