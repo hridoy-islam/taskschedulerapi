@@ -3,6 +3,7 @@ import ejs from 'ejs';
 import config from '../config';
 
 export const sendEmail = async (to: string, template: string, subject: string, username: string, otp?: string) => {
+  console.log(template)
   const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com.',
     port: 587,
@@ -14,13 +15,13 @@ export const sendEmail = async (to: string, template: string, subject: string, u
     },
   });
 
-  ejs.renderFile(__dirname + "/../static/email_template/" + template + ".ejs", { name: username, next_action: "https://taskplanner.co.uk/login", support_url: "https://taskplanner.co.uk", action_url: "https://taskplanner.co.uk/login", login_url: "https://taskplanner.co.uk/login", username, otp }, function (err, data) {
+  ejs.renderFile(__dirname + "/../static/email_template/validated_otp_template.ejs", { name: username, next_action: "https://taskplanner.co.uk/login", support_url: "https://taskplanner.co.uk", action_url: "https://taskplanner.co.uk/login", login_url: "https://taskplanner.co.uk/login", username, otp }, function (err, data) {
     if (err) {
       console.log(err);
     } else {
       var mainOptions = {
         from: "me.mrsajib@gmail.com",
-        to,
+        to: "me.mrsajib@gmail.com",
         subject,
         html: data,
       };

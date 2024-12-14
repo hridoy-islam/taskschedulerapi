@@ -48,7 +48,7 @@ const validateOtp = async (email: string, otp: string) => {
     isUsed: false,
   })
 
-  
+
 
   if (!passwordReset || passwordReset.otp !== otp) {
     throw new AppError(httpStatus.NOT_FOUND, "Invalid OTP");
@@ -74,8 +74,6 @@ const validateOtp = async (email: string, otp: string) => {
     `${config.jwt_access_secret}`,
     { expiresIn: "10m" }
   );
-  // send email
-  await sendEmail(email, 'validated_otp_template', "OTP Validated Successfully", foundUser.name);
   return { resetToken };
 };
 
