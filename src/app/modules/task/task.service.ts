@@ -379,17 +379,18 @@ const getDueTasksByUser = async (assignedId: string, queryParams: Record<string,
 const getUpcommingTaskByUser = async (assignedId: string, queryParams: Record<string, any>) => {
   const tomorrowStart = moment().add(1, "days").startOf("day").toDate();
   // Get the date three days from now and set to the end of that day
-  const threeDaysFromNowEnd = moment().add(7, "days").endOf("day").toDate();
+  // const threeDaysFromNowEnd = moment().add(7, "days").endOf("day").toDate();
 
   const query = {
     assigned: assignedId, // Filter by assigned ID
     status: "pending",
     dueDate: {
       $gte: tomorrowStart, // Due date is today or later
-      $lt: threeDaysFromNowEnd, // Due date is before the end of the third day
     },
     ...queryParams,
   };
+
+  // $lt: threeDaysFromNowEnd, // Due date is before the end of the third day
 
   // Use the QueryBuilder to build the query
   const taskQuery = new QueryBuilder(
@@ -433,17 +434,13 @@ const getUpcommingTaskByUser = async (assignedId: string, queryParams: Record<st
 
 
 const getAssignedTaskByUser = async (authorId: string, queryParams: Record<string, any>) => {
-  const tomorrowStart = moment().add(1, "days").startOf("day").toDate();
-  const sevenDaysFromNowEnd = moment().add(7, "days").endOf("day").toDate();
+  // const tomorrowStart = moment().add(1, "days").startOf("day").toDate();
+  // const sevenDaysFromNowEnd = moment().add(7, "days").endOf("day").toDate();
 
   const query = {
     author: authorId, // Author matches the passed authorId
     assigned: { $ne: authorId }, // Assigned is not equal to the passed authorId
     status: "pending", // Assuming you only want pending tasks
-    dueDate: {
-      $gte: tomorrowStart, // Due date is today or later
-      $lt: sevenDaysFromNowEnd, // Due date is before the end of the seventh day
-    },
     ...queryParams,
   };
   // Use the QueryBuilder to build the query
@@ -460,7 +457,6 @@ const getAssignedTaskByUser = async (authorId: string, queryParams: Record<strin
   const meta = await taskQuery.countTotal(); // Get metadata (e.g., total count)
 
    const data = await taskQuery.modelQuery; // Get the query result
-
    // Execute the query to fetch the tasks
    const count = await getSingleUserUnreadCount({
      _id: authorId,

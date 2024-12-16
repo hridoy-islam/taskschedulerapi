@@ -14,7 +14,7 @@ export const sendEmail = async (to: string, template: string, subject: string, u
     },
   });
 
-  ejs.renderFile(__dirname + "/../static/email_template/" + template + ".ejs", { name: username, next_action: "https://taskplanner.co.uk/login", support_url: "https://taskplanner.co.uk", action_url: "https://taskplanner.co.uk/login", login_url: "https://taskplanner.co.uk/login", username, otp }, function (err, data) {
+  ejs.renderFile(__dirname + "/../static/email_template/" + template + ".ejs", { name: username, next_action: "https://taskplanner.co.uk/login", support_url: "https://taskplanner.co.uk", action_url: "https://taskplanner.co.uk/login", login_url: "https://taskplanner.co.uk/login", username, otp }, function (err :any, data: any) {
     if (err) {
       console.log(err);
     } else {
