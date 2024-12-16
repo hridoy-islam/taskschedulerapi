@@ -42,6 +42,26 @@ const validateOtpSchema = z.object({
   }),
 });
 
+const verifyEmailAccount = z.object({
+  body: z.object({
+    email: z.string().email('Invalid email address'),
+    otp: z.string().length(4, 'OTP must be exactly 4 digits'),
+  }),
+});
+
+const resetPasswordSchema = z.object({
+  body: z.object({
+    email: z.string().email('Invalid Email Address'),
+    newPassword: z.string({ required_error: "Password is Required" })
+  })
+})
+
+const emailSentOtpSchema = z.object({
+  body: z.object({
+    email: z.string().email('Invalid Email Address'),
+  })
+})
+
 
 
 export const AuthValidations = {
@@ -49,5 +69,8 @@ export const AuthValidations = {
   forgetPasswordValidationSchema,
   createUserValidationSchema,
   googleValidationSchema,
-  validateOtpSchema
+  validateOtpSchema,
+  verifyEmailAccount,
+  resetPasswordSchema,
+  emailSentOtpSchema
 };

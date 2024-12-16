@@ -17,6 +17,7 @@ export interface TUser {
   image?: string;
   phone?: string;
   googleUid?: string;
+  otp?:string;
 }
 
 export interface UserModel extends Model<TUser> {

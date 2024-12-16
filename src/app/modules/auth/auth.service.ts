@@ -120,6 +120,33 @@ const createUserIntoDB = async (payload: TCreateUser) => {
     return result;
 };
 
+const EmailSendOTP = async(email: string) => {
+    const user = await User.isUserExists(email);
+    if (!user) {
+        throw new AppError(httpStatus.NOT_FOUND, "No User Found");
+    }
+    // Generate OTP 
+    const otp = Math.floor(1000 + Math.random() * 9000).toString(); // 4-digit OTP
+    await User.updateOne({ email }, { otp });
+    // send email
+}
+
+const verifyEmailIntoDB = async (email: string, otp: string) => {
+    const foundUser = await User.isUserExists(email.toLowerCase());
+    if (!foundUser) {
+      throw new AppError(httpStatus.NOT_FOUND, "Email is not correct");
+    }
+  
+     // Check if the OTP matches
+     if (foundUser.otp !== otp) {
+        throw new AppError(httpStatus.BAD_REQUEST, "Invalid OTP!");
+    }
+    await User.updateOne(
+        { email },
+        { authorized: true }
+    );
+};
+
 // const forgetPassword = async (email: string) => {
 //   const user = await User.isUserExists(email);
 //   if (!user) {
@@ -183,5 +210,7 @@ export const AuthServices = {
     createUserIntoDB,
     resetPassword,
     forgetPasswordOtp,
-    googleLogin
+    googleLogin,
+    verifyEmailIntoDB,
+    EmailSendOTP
 };

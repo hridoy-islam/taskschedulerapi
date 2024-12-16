@@ -43,7 +43,7 @@ const googleLoginController = catchAsync(async (req, res) => {
 const createUser = catchAsync(async (req, res) => {
   const result = await AuthServices.createUserIntoDB(req.body);
   // send welcome email to user
-  await sendEmail("me.mrsajib@gmail.com", "hello");
+  //await sendEmail("me.mrsajib@gmail.com", "hello");
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
@@ -64,7 +64,7 @@ const forgetPassword = catchAsync(async (req, res) => {
   });
 });
 
-const validate = catchAsync(async (req, res) => {
+const validateReset = catchAsync(async (req, res) => {
   const email = req.body.email;
   const otp = req.body.otp;
   const result = await PasswordResetServices.validateOtp(email, otp);
@@ -87,11 +87,38 @@ const resetPassword = catchAsync(async (req, res) => {
   });
 });
 
+const verifyEmail = catchAsync(async (req, res) => {
+  const email = req.body.email;
+  const otp = req.body.otp;
+  const result = await AuthServices.verifyEmailIntoDB(email, otp);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Email verified succesfully!",
+    data: result,
+  });
+});
+
+const emailVerifySendOtp = catchAsync(async (req, res) => {
+  const email = req.body.email;
+  const result = await AuthServices.EmailSendOTP(email);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Email OTP Send succesfully!",
+    data: result,
+  });
+});
+
+
+
 export const AuthControllers = {
   login,
   createUser,
   forgetPassword,
   resetPassword,
   googleLoginController,
-  validate
+  validateReset,
+  verifyEmail,
+  emailVerifySendOtp
 };

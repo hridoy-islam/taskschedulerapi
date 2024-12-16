@@ -37,7 +37,19 @@ router.post(
 router.post(
   "/validate",
   validateRequest(AuthValidations.validateOtpSchema),
-  AuthControllers.validate
+  AuthControllers.validateReset
 );
+
+router.post('/reset', validateRequest(AuthValidations.resetPasswordSchema), AuthControllers.resetPassword)
+
+router.post('/emailotp', validateRequest(AuthValidations.emailSentOtpSchema), AuthControllers.emailVerifySendOtp);
+
+router.post(
+  "/verifyemail",
+  validateRequest(AuthValidations.verifyEmailAccount),
+  AuthControllers.verifyEmail
+);
+
+
 
 export const AuthRoutes = router;
