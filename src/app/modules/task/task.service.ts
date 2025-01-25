@@ -539,11 +539,15 @@ const getTasksForPlannerByMonth = async (
       $gte: startDate,
       $lt: endDate,
     },
+
+    status: "pending",
     ...(assigned && { assigned }), // Filter by assigned user if provided
   }).populate('author', 'name') // Populate only the name field from the author
   .populate('assigned', 'name');
   return tasks;
 };
+
+
 
 const getTasksForPlannerByWeek = async (
   year: string,
