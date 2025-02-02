@@ -40,7 +40,11 @@ const createTaskIntoDB = async (payload: TTask) => {
   payload.lastSeen = lastSeen;
 
   const result = await Task.create(payload);
-
+  
+  if (author._id.toString() === assigned._id.toString()) {
+    // If both are the same, skip creating and sending the notification
+    return result;
+  }
   // Step 2: Create a notification for the assigned user
   const notification = await NotificationService.createNotificationIntoDB({
     userId: assigned._id, // User receiving the notification
@@ -48,6 +52,8 @@ const createTaskIntoDB = async (payload: TTask) => {
     type: "task",
     message: `${author.name} assigned a new task "${result.taskName}"`
   });
+
+  //
 
   // Step 3: Send the notification in real-time using WebSocket
   const io = getIO();
@@ -266,8 +272,8 @@ const getTasksBoth = async (authorId: string, assignedId: string, queryParams: R
 
   // Use the QueryBuilder to build the query
   const taskQuery = new QueryBuilder(
-    Task.find().populate("author assigned company"), // Populate relevant fields
-    query // Base query parameters
+    Task.find().populate("author assigned company"), // Apply the query here
+    query
   )
     .search(['taskName']) // Optionally search by task name
     .filter() // Apply any additional filters from queryParams
@@ -301,6 +307,11 @@ const getTasksBoth = async (authorId: string, assignedId: string, queryParams: R
     result,
   };
 };
+
+
+
+
+
 
 const getDueTasksByUser = async (assignedId: string, queryParams: Record<string, any>) => {
   const todayStart = moment().startOf("day").toDate();

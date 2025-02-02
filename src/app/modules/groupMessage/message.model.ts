@@ -21,6 +21,11 @@ const GroupMessageSchema = new Schema<TGroupMessage>(
       required: true,
       ref: "User",
     },
+    seenBy: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "User", // Reference to the User who has seen the comment
+      }]
   },
   {
     timestamps: true,

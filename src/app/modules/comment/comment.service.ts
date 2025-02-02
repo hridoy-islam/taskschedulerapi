@@ -3,6 +3,7 @@ import { TaskServices } from "../task/task.service";
 import { User } from "../user/user.model";
 import { TComment } from "./comment.interface";
 import { Comment } from "./comment.model";
+import { getIO } from "../../../socket";
 
 const createCommentIntoDB = async (payload: TComment) => {
 
@@ -14,7 +15,11 @@ const createCommentIntoDB = async (payload: TComment) => {
     return null;
   }
 
-  const data = await Comment.create(payload);
+  const commentPayload = {
+    ...payload,
+    seenBy: [authorId], 
+  };
+  const data = await Comment.create(commentPayload);
   // if (data) {
   //   const taskId = data?.taskId.toString();
   //   const userId = data?.authorId.toString();
@@ -35,18 +40,21 @@ const createCommentIntoDB = async (payload: TComment) => {
     authorId
   };
   // check other-User against authorId
+  // const otherUser = users.creator.toString() === authorId.toString() ? users.assigned : users.creator;
   const otherUser = users.creator.toString() === authorId.toString() ? users.assigned : users.creator;
 
-  const result = {
-    ...data.toObject(),
-    otherUser,
-    authorName: author.name,
-    taskName : task.taskName
-  };
+
+    const result = {
+      ...data.toObject(),
+      otherUser,
+      authorName: author.name,
+      taskName: task.taskName,
+    };
+
   return result;
 };
 
-const getCommentsFromDB = async (id: string) => {
+const getCommentsFromDB = async (id: string, user: any) => {
   const result = await Comment.find({ taskId: id }).populate({
     path: 'authorId', // Populate the author's ID for the comment
     select: '_id name' // Select only the ID and name for the author of the comment
@@ -62,6 +70,12 @@ const getCommentsFromDB = async (id: string) => {
   //   console.error(error);
   // }
   // }
+
+
+  await Comment.updateMany(
+    { taskId: id },
+    { $addToSet: { seenBy: user._id } } // Add the user ID to `seenBy` if not already present
+  );
   return result;
 }
 

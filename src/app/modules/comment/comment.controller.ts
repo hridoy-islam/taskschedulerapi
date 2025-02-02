@@ -16,7 +16,8 @@ const createComment = catchAsync(async (req, res) => {
 
 const getComments = catchAsync(async (req, res) => {
   const { id } = req.params;
-  const result = await CommentServices.getCommentsFromDB(id);
+  const user = req.user;
+  const result = await CommentServices.getCommentsFromDB(id, user);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,

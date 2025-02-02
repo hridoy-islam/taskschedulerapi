@@ -8,6 +8,9 @@ import { User } from "../user/user.model";
 import moment from "moment";
 import mongoose from "mongoose";
 import { GroupMessage } from "../groupMessage/message.model";
+import { NotificationService } from "../notification/notification.service";
+import { getIO } from "../../../socket";
+
 
 const createGroupIntoDB = async (payload: TGroup, requester : any) => {
   // Fetch the author/creator by ID
@@ -41,8 +44,38 @@ const createGroupIntoDB = async (payload: TGroup, requester : any) => {
     members: membersWithRole,
   });
   
+  // Step 2: Create a notification for the group members excluding the creator
+  const notificationMessage = `${author.name} Added you in group "${result.groupName}"`;
+
+  // Create notifications for all members except the creator
+  const notifications = await Promise.all(
+    payload.members.map(async (member) => {
+      if (member._id.toString() !== author._id.toString()) {
+        return await NotificationService.createNotificationIntoDB({
+          userId: member._id, // User receiving the notification
+          senderId: author._id, // User creating the group
+          type: "group",
+          message: notificationMessage,
+        });
+      }
+    })
+  );
+
+  // Step 3: Send the notification in real-time using WebSocket for each member
+  const io = getIO();
+
+  payload.members.forEach((member) => {
+    if (member._id.toString() !== author._id.toString()) {
+      const memberId = member._id.toString();
+      io.to(memberId).emit("notification", notifications.find(
+        (notification) => notification?.userId.toString() === memberId
+      ));
+    }
+  });
+
   return result;
 };
+
 
 
 const getAllGroupFromDB = async (query: Record<string, unknown>, requester: any) => {

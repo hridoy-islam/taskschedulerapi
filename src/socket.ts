@@ -39,11 +39,13 @@ export const initializeSocket = (server: Server): void => {
         if (!chat.authorId) {
           return console.log("chat.users not defined");
         }
+        
         // chat?.users?.forEach((user: any) => {
         //   if (user?._id === newMessageReceived.sender?._id) {
         //     return;
         //   }
         // });
+
         else if(chat?.authorId !== chat?.otherUser){
           
           socket
@@ -60,6 +62,28 @@ export const initializeSocket = (server: Server): void => {
       }
       );
 
+          // Handle new comment events
+          socket.on("newComment", (commentData: any) => {
+            const { taskId, authorId, otherUser } = commentData;
+      
+            // Ensure `io` is initialized before emitting
+            if (!io) {
+              console.error("Socket.io is not initialized!");
+              return;
+            }
+      
+            // Emit the new comment to the specific task's room
+            if (taskId) {
+              io.to(taskId.toString()).emit("newComment", commentData);
+              console.log(`New comment emitted to task room: ${taskId}`);
+            }
+      
+            // Notify the assigned user (otherUser) if they are not the author
+            if (otherUser && otherUser !== authorId) {
+              io.to(otherUser.toString()).emit("newComment", commentData);
+              console.log(`New comment emitted to assigned user: ${otherUser}`);
+            }
+          });
 
     // Add other socket event handlers as needed
     socket.on("send notification", (notificationData: any) => {

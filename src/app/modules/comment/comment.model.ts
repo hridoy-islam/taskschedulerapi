@@ -21,6 +21,7 @@ const commentSchema = new Schema<TComment>(
       required: true,
       ref: "User",
     },
+    
   },
   {
     timestamps: true,

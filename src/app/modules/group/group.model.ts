@@ -51,6 +51,7 @@ const groupSchema = new Schema<TGroup>(
       default: "active",
     },
     members: [membersSchema],
+   
   },
   {
     timestamps: true,

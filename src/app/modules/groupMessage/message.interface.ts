@@ -7,4 +7,6 @@ export interface TGroupMessage {
     authorId: Types.ObjectId; // Reference to the author
     isFile: boolean; // Is the comment a file
     content: string; // The comment content
+    seenBy: Types.ObjectId[]; 
+
 }
