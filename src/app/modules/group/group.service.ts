@@ -236,7 +236,7 @@ const updateTaskIntoGroup = async (id: string, payload: Partial<TGroup>, request
   // check whether the creator is admin or not
   const isCreatorAdmin = existingTask.members.find(
     (member) => member?._id?.toString() === requester._id
-  )?.role === "admin";
+  )?.role === "admin" || "company" || "creator" ||"member";
 
   // If the creator is not an admin, return an error
   if (!isCreatorAdmin) {
@@ -246,8 +246,11 @@ const updateTaskIntoGroup = async (id: string, payload: Partial<TGroup>, request
     );
   }
 
-  const { groupName, description, status } = payload;
-  const upDatedInfo = { groupName, description, status };
+  const { groupName, description, status, isArchived } = payload;
+  // If isArchived is true, force status to "archived"
+  const updatedStatus = isArchived ? "archived" : status || "active";
+
+  const upDatedInfo = { groupName, description, status: updatedStatus };
 
   // Update the task in the database
   const result = await Group.findByIdAndUpdate(id, upDatedInfo, {

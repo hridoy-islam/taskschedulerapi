@@ -26,6 +26,13 @@ const createMessageIntoDB = async (payload: TGroupMessage, requester: any) => {
     return null;
   }
 
+  if (task.status === 'archived') {
+    throw new AppError(
+      httpStatus.FORBIDDEN,
+      "This group is archived and cannot accept new messages."
+    );
+  }
+
   const data = await GroupMessage.create(payload);
 
   const otherUserArr = task.members.filter(

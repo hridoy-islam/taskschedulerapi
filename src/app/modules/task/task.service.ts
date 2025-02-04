@@ -589,7 +589,9 @@ const getTasksForPlannerByWeek = async (
   //   .startOf("isoWeek")
   //   .toDate();
 
-  const startDate = moment().year(yearNumber).week(weekNumber).startOf("isoWeek").subtract(1, 'days').toDate();
+  // const startDate = moment().year(yearNumber).week(weekNumber).startOf("isoWeek").subtract(1, 'days').toDate();
+
+  const startDate = moment().year(yearNumber).isoWeek(weekNumber).startOf("isoWeek").toDate();
 
   console.log(startDate);
 
