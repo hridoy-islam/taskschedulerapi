@@ -563,7 +563,7 @@ const getTasksForPlannerByMonth = async (
 const getTasksForPlannerByWeek = async (
   year: string,
   week: string,
-  assigned?: string // Optional parameter for filtering by user
+  assigned: string // Optional parameter for filtering by user
 ) => {
 
   
@@ -600,14 +600,26 @@ const getTasksForPlannerByWeek = async (
   console.log(endDate);
 
   // Fetch tasks from the database
+  // const tasks = await Task.find({
+  //   dueDate: {
+  //     $gte: startDate,
+  //     $lt: endDate,
+  //   },
+  //   ...(assigned ? { assigned } : {}), // Filter by assigned user if provided
+  // });
+
+  // return tasks;
+
   const tasks = await Task.find({
     dueDate: {
       $gte: startDate,
       $lt: endDate,
     },
-    ...(assigned ? { assigned } : {}), // Filter by assigned user if provided
-  });
 
+    status: "pending",
+    ...(assigned && { assigned }), // Filter by assigned user if provided
+  }).populate('author', 'name') // Populate only the name field from the author
+  .populate('assigned', 'name');
   return tasks;
 };
 
