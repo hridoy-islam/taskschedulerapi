@@ -51,10 +51,10 @@ const groupSchema = new Schema<TGroup>(
       default: "active",
     },
     members: [membersSchema],
-    isArchived:{
-      type: Boolean,
-      default: false,
-    }
+    // isArchived:{
+    //   type: Boolean,
+    //   default: false,
+    // }
   },
   {
     timestamps: true,

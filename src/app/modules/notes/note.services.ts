@@ -2,11 +2,43 @@ import QueryBuilder from "../../builder/QueryBuilder";
 import { Note } from "./note.model";
 import { TNote } from "./note.interface";
 import { NoteSearchableFields } from "./note.constant";
+import { User } from "../user/user.model";
+import mongoose from "mongoose";
 
-const createNoteIntoDB = async (payload: TNote) => {
-  const result = await Note.create(payload);
+
+
+const createNoteIntoDB = async (payload: { title: string, assignId: string }) => {
+  const { title, assignId } = payload;
+
+  // Find user by ID
+  const user = await User.findById(assignId);
+  if (!user) {
+    return null; // If the user doesn't exist, return null
+  }
+
+  // Create the note payload
+  const notePayload = {
+    title,
+    assignId,
+    content: '',  // Assuming an empty content initially
+    tagId: [],     // Empty array for tags initially, you can add logic later to populate it
+  };
+
+  // Create the note in the database
+  const data = await Note.create(notePayload);
+
+  // Prepare the result with additional data
+  const result = {
+    ...data.toObject(),
+    assignName: user.name, // Get the name of the assigned user
+    noteTitle: data.title, // The title of the note
+  };
+
   return result;
 };
+
+
+
 
 const getAllNoteFromDB = async (query: Record<string, unknown>) => {
   const noteQuery = new QueryBuilder(Note.find().populate("author tagId"), query)
@@ -25,7 +57,10 @@ const getAllNoteFromDB = async (query: Record<string, unknown>) => {
   };
 };
 
-const getSingleNoteFromDB = async (id: string) => {
+
+
+
+const getNoteByIdFromDB = async (id: string) => {
   const result = await Note.findById(id);
   return result;
 };
@@ -47,7 +82,7 @@ const deleteNoteFromDB = async (id: any) => {
 
 export const NoteServices = {
   getAllNoteFromDB,
-  getSingleNoteFromDB,
+  getNoteByIdFromDB,
   updateNoteIntoDB,
   createNoteIntoDB,
   deleteNoteFromDB,

@@ -246,17 +246,18 @@ const updateTaskIntoGroup = async (id: string, payload: Partial<TGroup>, request
     );
   }
 
-  const { groupName, description, status, isArchived } = payload;
+  const { groupName, description, status} = payload;
   // If isArchived is true, force status to "archived"
-  const updatedStatus = isArchived ? "archived" : status || "active";
+  // const updatedStatus = isArchived ? "archived" : status || "active";
 
-  const upDatedInfo = { groupName, description, status: updatedStatus };
+  const upDatedInfo = { groupName, description, status };
 
   // Update the task in the database
   const result = await Group.findByIdAndUpdate(id, upDatedInfo, {
     new: true,
     runValidators: true,
     upsert: true,
+    
   });
 
   return result;

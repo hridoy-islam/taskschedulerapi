@@ -17,7 +17,7 @@ router.get(
 router.get(
   "/:id",
   auth("admin", "director", "company", "creator", "user"),
-  NoteControllers.getSingleNote
+  NoteControllers.getNoteById
 );
 
 router.patch(

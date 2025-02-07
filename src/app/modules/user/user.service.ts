@@ -69,27 +69,47 @@ const getAllUserByCompany = async (userId: string) => {
 
   // Determine the user's role and set the query accordingly
   if (user.role === 'admin' || user.role === 'director') {
-    // Admins and Directors can see all users
-    const allUsers = await User.find(query).lean();
-    return allUsers
+    // Only fetch users with roles 'admin' or 'director' for admin and director users
+    const query = { role: { $in: ['admin', 'director'] } };
+    const filteredUsers = await User.find(query).lean();
+    return filteredUsers;
   }
 
   else if (user.role === 'company') {
-    query.$or = [
-      { company: user._id }, // Users from the same company
-      { role: { $in: ['admin', 'director'] } } // Admins and Directors
-    ];
+    const query = { 
+      company: user._id, 
+      role: { $in: ['creator', 'user'] } 
+    };
     const companyUsers = await User.find(query).lean();
     return companyUsers // Return users from the same company
   }
 
-  else if (user.role === 'creator' || user.role === 'user') {
-    // Creators and regular users see their colleagues
-    const colleaguesIds = user.colleagues || [];
-    query._id = { $in: colleaguesIds }; // Use the colleagues array
-    const colleagues = await User.find(query).lean(); // Fetch colleagues based on the query
-    return colleagues // Return only the colleagues
+
+  else if (user.role === 'creator') {
+    const companyId = user.company; // Get the company ID of the user
+
+    // Build the query to fetch all users with the same company ID
+    query.company = companyId;  // Only users who share the same company ID
+  
+    // Execute the query to find users
+    const users = await User.find(query).lean();
+  
+    return users;
   }
+
+
+  else if (user.role === 'user') {
+    // Users can only see their colleagues
+    const colleaguesIds = user.colleagues || [];
+    const query = { _id: { $in: colleaguesIds } }; // Use the colleagues array
+    const colleagues = await User.find(query).lean(); // Fetch colleagues based on the query
+  
+    return colleagues; // Return only the colleagues
+  }
+  
+  
+  
+  
 
   const users = await User.find(query);
   return users;
