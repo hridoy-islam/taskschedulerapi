@@ -4,44 +4,57 @@ import { TNote } from "./note.interface";
 import { NoteSearchableFields } from "./note.constant";
 import { User } from "../user/user.model";
 import mongoose from "mongoose";
+import { query } from "express";
 
 
 
-const createNoteIntoDB = async (payload: { title: string, assignId: string }) => {
-  const { title, assignId } = payload;
+const createNoteIntoDB = async (payload:TNote) => {
+  try {
+    const { title, author, content, tags } = payload;
 
-  // Find user by ID
-  const user = await User.findById(assignId);
-  if (!user) {
-    return null; // If the user doesn't exist, return null
+    // Validate required fields
+    if (!title || !author) {
+      console.error("Validation Failed: Missing title or assignId", { title, author });
+      return { success: false, message: "Title and assignId are required." };
+    }
+
+    // Find user by ID
+    const user = await User.findById(author);
+    if (!user) {
+      return { success: false, message: "Assigned user not found." };
+    }
+
+    // Create the note payload
+    const notePayload = {
+      title,
+      author,
+      content: content || "", 
+      tags: tags || [],  
+    };
+
+    const data = await Note.create(notePayload);
+
+    return {
+      success: true,
+      message: "Note created successfully.",
+      data: {
+        ...data.toObject(),
+        authorName: user.name, 
+        noteTitle: data.title, 
+      },
+    };
+  } catch (error) {
+    console.error("Error creating note:", error);
+    return { success: false, message: "Internal server error." };
   }
-
-  // Create the note payload
-  const notePayload = {
-    title,
-    assignId,
-    content: '',  // Assuming an empty content initially
-    tagId: [],     // Empty array for tags initially, you can add logic later to populate it
-  };
-
-  // Create the note in the database
-  const data = await Note.create(notePayload);
-
-  // Prepare the result with additional data
-  const result = {
-    ...data.toObject(),
-    assignName: user.name, // Get the name of the assigned user
-    noteTitle: data.title, // The title of the note
-  };
-
-  return result;
 };
 
 
 
 
+
 const getAllNoteFromDB = async (query: Record<string, unknown>) => {
-  const noteQuery = new QueryBuilder(Note.find().populate("author tagId"), query)
+  const noteQuery = new QueryBuilder(Note.find().populate("author").populate("tags"), query)
     .search(NoteSearchableFields)
     .filter()
     .sort()
@@ -60,10 +73,62 @@ const getAllNoteFromDB = async (query: Record<string, unknown>) => {
 
 
 
-const getNoteByIdFromDB = async (id: string) => {
-  const result = await Note.findById(id);
-  return result;
+
+const getNoteByUserIdFromDB = async (authorId: string, query: Record<string, unknown>) => {
+  try {
+    // Build query to search notes by author ID and populate 'author' and 'tags'
+    const noteQuery = new QueryBuilder(Note.find({ author: authorId }).populate("author").populate("tags"),query)
+      .search(NoteSearchableFields)  // Apply search logic based on NoteSearchableFields
+      .filter()                     // Apply filter conditions
+      .sort()                        // Apply sorting
+      .paginate()                    // Apply pagination
+      .fields();                     // Select specific fields if needed
+
+    // Count total documents based on the query
+    const meta = await Note.countDocuments({ author: authorId });  // Get total count of notes for the author
+
+    // Execute the query to get the actual results
+    const result = await noteQuery.modelQuery.exec(); // Execute query and return the result
+
+    return {
+      meta,  // Total number of notes for the author
+      result, // Fetched notes with author and tags populated
+    };
+  } catch (error) {
+    console.error("Error fetching notes by author:", error);
+    return {
+      meta: 0,
+      result: [],  // Return empty result in case of error
+    };
+  }
 };
+
+
+const getNoteByIdFromDB= async (noteId: string, query: Record<string, unknown>) => {
+  try {
+    const noteQuery = new QueryBuilder(Note.find({ _id:noteId }).populate("author").populate("tags"),query)
+      .search(NoteSearchableFields)  // Apply search logic based on NoteSearchableFields
+      .filter()                     // Apply filter conditions
+      .sort()                        // Apply sorting
+      .paginate()                    // Apply pagination
+      .fields();                     // Select specific fields if needed
+
+    // Count total documents based on the query
+
+    // Execute the query to get the actual results
+    const result = await noteQuery.modelQuery.exec(); // Execute query and return the result
+
+    return {
+      result, // Fetched notes with author and tags populated
+    };
+  } catch (error) {
+    console.error("Error fetching notes by author:", error);
+    return {
+      meta: 0,
+      result: [],  // Return empty result in case of error
+    };
+  }
+}
 
 const updateNoteIntoDB = async (id: string, payload: Partial<TNote>) => {
   const result = await Note.findByIdAndUpdate(id, payload, {
@@ -75,15 +140,29 @@ const updateNoteIntoDB = async (id: string, payload: Partial<TNote>) => {
   return result;
 };
 
-const deleteNoteFromDB = async (id: any) => {
-  const result = await Note.findOneAndDelete(id);
-  return result;
+const deleteNoteFromDB = async (id: string) => {
+  try {
+    // Find and delete the note by matching the _id field
+    const result = await Note.findOneAndDelete({ _id: id });
+
+    if (!result) {
+      throw new Error("Note not found");
+    }
+
+    return result;
+  } catch (error) {
+    console.error("Error deleting note:", error);
+    return null;  // Return null in case of an error or if the note isn't found
+  }
 };
+
+
 
 export const NoteServices = {
   getAllNoteFromDB,
-  getNoteByIdFromDB,
+  getNoteByUserIdFromDB,
   updateNoteIntoDB,
   createNoteIntoDB,
   deleteNoteFromDB,
+  getNoteByIdFromDB
 };

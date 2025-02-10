@@ -12,15 +12,24 @@ const noteSchema = new Schema<TNote>(
     content: {
       type: String,
       trim: true,
+      default:''
     },
     author: {
       type: Schema.Types.ObjectId,
       required: true,
       ref: "User",
     },
-    tagId : {
+    tags :[ {
       type: Schema.Types.ObjectId,
-      ref: 'Tags'
+      ref: 'Tag'
+    }],
+    favorite: {
+      type: Boolean,
+      default: false,
+    },
+    isArchive:{
+      type: Boolean,
+      default: false,
     }
   },
   {

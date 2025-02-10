@@ -15,6 +15,11 @@ router.get(
   TagsControllers.getAllTags
 );
 router.get(
+  "/user/:id",
+  auth("admin", "director", "company", "creator", "user"),
+  TagsControllers.getAllForUserTags
+);
+router.get(
   "/:id",
   auth("admin", "director", "company", "creator", "user"),
   TagsControllers.getSingleTags

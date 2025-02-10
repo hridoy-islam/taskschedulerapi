@@ -6,5 +6,7 @@ export interface TNote {
   title: string;
   content: string;
   author: Types.ObjectId;
-  tagId: Types.ObjectId;
+  favorite?: boolean;
+  tags: Types.ObjectId[];
+  isArchive?:boolean
 }

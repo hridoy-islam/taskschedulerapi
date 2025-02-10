@@ -24,9 +24,20 @@ const getAllNotes: RequestHandler = catchAsync(async (req, res) => {
     data: result,
   });
 });
-const  getNoteById = catchAsync(async (req, res) => {
+const  getNoteByUserId = catchAsync(async (req, res) => {
   const { id } = req.params;
-  const result = await NoteServices.getNoteByIdFromDB(id);
+  const result = await NoteServices.getNoteByUserIdFromDB(id, req.query);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Note is retrieved succesfully",
+    data: result,
+  });
+});
+
+const getSingleNoteById= catchAsync(async (req, res) => {
+  const { id } = req.params;
+  const result = await NoteServices.getNoteByIdFromDB(id, req.query);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
@@ -61,6 +72,7 @@ export const NoteControllers = {
   getAllNotes,
   createNote,
   updateNote,
-  getNoteById,
+  getNoteByUserId,
   deleteNote,
+  getSingleNoteById
 };

@@ -15,7 +15,20 @@ const createTags = catchAsync(async (req, res) => {
 });
 
 const getAllTags: RequestHandler = catchAsync(async (req, res) => {
+
   const result = await TagsServices.getAllTagsFromDB(req.query);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Tag retrived succesfully",
+    data: result,
+  });
+});
+
+const getAllForUserTags: RequestHandler = catchAsync(async (req, res) => {
+  const { id } = req.params;
+
+  const result = await TagsServices.getAllTagsForUserFromDB(id ,req.query);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
@@ -61,5 +74,6 @@ export const TagsControllers = {
   getAllTags,
   deleteTags,
   updateTags,
-  getSingleTags
+  getSingleTags,
+  getAllForUserTags
 };

@@ -20,4 +20,4 @@ const tagsSchema = new Schema<TTags>(
   }
 );
 
-export const Tags = model<TTags>("tags", tagsSchema);
+export const Tag = model<TTags>("Tag", tagsSchema);

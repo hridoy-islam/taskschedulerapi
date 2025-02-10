@@ -17,16 +17,22 @@ router.get(
 router.get(
   "/:id",
   auth("admin", "director", "company", "creator", "user"),
-  NoteControllers.getNoteById
+  NoteControllers.getNoteByUserId
+);
+
+router.get(
+  "/singlenote/:id",
+  auth("admin", "director", "company", "creator", "user"),
+  NoteControllers.getSingleNoteById
 );
 
 router.patch(
-  "/:id",
+  "/singlenote/:id",
   auth("admin", "director", "user", "company", "creator"),
   NoteControllers.updateNote
 );
 router.delete(
-  "/:id",
+  "/singlenote/:id",
   auth("admin", "director", "user", "company", "creator"),
   NoteControllers.deleteNote
 );
