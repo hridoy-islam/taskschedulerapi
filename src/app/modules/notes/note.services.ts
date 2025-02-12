@@ -3,10 +3,10 @@ import { Note } from "./note.model";
 import { TNote } from "./note.interface";
 import { NoteSearchableFields } from "./note.constant";
 import { User } from "../user/user.model";
-import mongoose from "mongoose";
+import mongoose, { Types } from "mongoose";
 import { query } from "express";
 
-
+const { ObjectId } = mongoose.Types;
 
 const createNoteIntoDB = async (payload:TNote) => {
   try {
@@ -130,14 +130,55 @@ const getNoteByIdFromDB= async (noteId: string, query: Record<string, unknown>) 
   }
 }
 
-const updateNoteIntoDB = async (id: string, payload: Partial<TNote>) => {
-  const result = await Note.findByIdAndUpdate(id, payload, {
-    new: true,
-    runValidators: true,
-    upsert: true,
-  });
+const getSharedNoteByIdFromDB = async (userId: string, query: Record<string, unknown>) => {
+  try {
+    const userIdObj = new ObjectId(userId); 
 
-  return result;
+    // Build query to search notes where userId is present in 'sharedWith' array
+    const noteQuery = new QueryBuilder(
+      Note.find({ sharedWith: { $in: [userIdObj] } })  , 
+      query
+    )
+      .search(NoteSearchableFields)  // Apply search logic based on NoteSearchableFields
+      .filter()                     // Apply filter conditions
+      .sort()                        // Apply sorting
+      .paginate()                    // Apply pagination
+      .fields();                     // Select specific fields if needed
+
+    // Count total documents based on the query
+    const meta = await Note.countDocuments({ sharedWith: { $in: [userIdObj] } });  // Use userIdObj
+
+    // Execute the query to get the actual results
+    const result = await noteQuery.modelQuery.exec(); // Execute the query
+
+    return {
+      meta,  // Total number of notes shared with the user
+      result, // Fetched notes with author and tags populated
+    };
+  } catch (error) {
+    console.error('Error fetching shared notes by user:', error);
+    return {
+      meta: 0,
+      result: [],  // Return an empty result in case of error
+    };
+  }
+};
+
+const updateNoteIntoDB = async (id: string, payload: Partial<TNote>) => {
+  try{
+    const result = await Note.findByIdAndUpdate(id, payload, {
+      new: true,
+      runValidators: true,
+      upsert: true,
+    });
+    
+    return result;
+  }
+  catch(error){
+    console.error('Error updating note:', error);
+    throw new Error('Failed to update note');
+  }
+  
 };
 
 const deleteNoteFromDB = async (id: string) => {
@@ -164,5 +205,6 @@ export const NoteServices = {
   updateNoteIntoDB,
   createNoteIntoDB,
   deleteNoteFromDB,
-  getNoteByIdFromDB
+  getNoteByIdFromDB,
+  getSharedNoteByIdFromDB
 };

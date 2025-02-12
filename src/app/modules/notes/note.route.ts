@@ -21,6 +21,12 @@ router.get(
 );
 
 router.get(
+  "/sharednote/:id",
+  auth("admin", "director", "company", "creator", "user"),
+  NoteControllers.getSharedNoteByUserId
+);
+
+router.get(
   "/singlenote/:id",
   auth("admin", "director", "company", "creator", "user"),
   NoteControllers.getSingleNoteById

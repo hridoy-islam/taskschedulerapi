@@ -46,6 +46,19 @@ const getSingleNoteById= catchAsync(async (req, res) => {
   });
 });
 
+const getSharedNoteByUserId= catchAsync(async (req, res) => {
+
+  const userId = req.user._id; 
+  
+  const result = await NoteServices.getSharedNoteByIdFromDB(userId, req.query);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Note is retrieved succesfully",
+    data: result,
+  });
+});
+
 const updateNote = catchAsync(async (req, res) => {
   const { id } = req.params;
   const result = await NoteServices.updateNoteIntoDB(id, req.body);
@@ -74,5 +87,6 @@ export const NoteControllers = {
   updateNote,
   getNoteByUserId,
   deleteNote,
-  getSingleNoteById
+  getSingleNoteById,
+  getSharedNoteByUserId
 };
