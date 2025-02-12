@@ -8,5 +8,6 @@ export interface TNote {
   author: Types.ObjectId;
   favorite?: boolean;
   tags: Types.ObjectId[];
-  isArchive?:boolean
+  isArchive?:boolean;
+  sharedWith?: Types.ObjectId[];
 }

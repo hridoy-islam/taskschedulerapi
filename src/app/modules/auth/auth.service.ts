@@ -7,144 +7,205 @@ import jwt, { JwtPayload } from "jsonwebtoken";
 import config from "../../config";
 import { createToken } from "./auth.utils";
 import { sendEmail } from "../../utils/sendEmail";
+import { jwtHelpers } from "../../helpers/jwtHelpers";
 
 const checkLogin = async (payload: TLogin) => {
-    try {
-        const foundUser = await User.isUserExists(payload.email);
-        if (!foundUser) {
-            throw new AppError(httpStatus.NOT_FOUND, "Login Detials is not correct");
-        }
-        if (foundUser.isDeleted) {
-            throw new AppError(
-                httpStatus.NOT_FOUND,
-                "This Account Has Been Deleted."
-            );
-        }
-
-        if (!(await User.isPasswordMatched(payload?.password, foundUser?.password)))
-            throw new AppError(httpStatus.FORBIDDEN, "Password do not matched");
-
-        const accessToken = jwt.sign(
-            {
-                _id: foundUser._id?.toString(),
-                email: foundUser?.email,
-                name: foundUser?.name,
-                role: foundUser?.role,
-            },
-            `${config.jwt_access_secret}`,
-            {
-                expiresIn: "2 days",
-            }
-        );
-
-        return {
-            accessToken,
-        };
-    } catch (error) {
-        throw new AppError(httpStatus.NOT_FOUND, "Details doesnt match");
+  try {
+    const foundUser = await User.isUserExists(payload.email);
+    if (!foundUser) {
+      throw new AppError(httpStatus.NOT_FOUND, "Login Detials is not correct");
     }
+    if (foundUser.isDeleted) {
+      throw new AppError(
+        httpStatus.NOT_FOUND,
+        "This Account Has Been Deleted."
+      );
+    }
+
+    if (!(await User.isPasswordMatched(payload?.password, foundUser?.password)))
+      throw new AppError(httpStatus.FORBIDDEN, "Password do not matched");
+
+    const accessToken = jwt.sign(
+      {
+        _id: foundUser._id?.toString(),
+        email: foundUser?.email,
+        name: foundUser?.name,
+        role: foundUser?.role,
+      },
+      `${config.jwt_access_secret}`,
+      {
+        expiresIn: "2 days",
+      }
+    );
+
+    const refreshToken = jwt.sign(
+      {
+        _id: foundUser._id?.toString(),
+        email: foundUser?.email,
+        name: foundUser?.name,
+        role: foundUser?.role,
+      },
+      `${config.jwt_refresh_secret}`
+    );
+
+    return {
+      accessToken,
+      refreshToken,
+    };
+  } catch (error) {
+    throw new AppError(httpStatus.NOT_FOUND, "Details doesnt match");
+  }
 };
 
-const googleLogin = async (payload: { email: string; name: string; password: string, googleUid: string, image?: string, phone?: string }) => {
-    try {
-        // Check if the user exists
-        const foundUser = await User.isUserExists(payload.email);
+const refreshToken = async (token: string) => {
+  //verify token
+  // invalid token - synchronous
+  let verifiedToken = null;
+  try {
+    verifiedToken = jwtHelpers.verifyToken(
+      token,
+      config.jwt.refresh_secret as Secret
+    );
+  } catch (err) {
+    throw new AppError(httpStatus.FORBIDDEN, "Invalid Refresh Token");
+  }
 
-        if (!foundUser) {
-            // If user doesn't exist, register them
-            const newUser = await User.create({
-                email: payload.email,
-                name: payload.name,
-                password: payload.password,
-                googleUid: payload.googleUid,
-                image: payload.image,
-                phone: payload.phone,
-                role: "company", // Default role for new users
-            });
+  const { userId } = verifiedToken;
 
-            // Generate JWT for the new user
-            const accessToken = jwt.sign(
-                {
-                    _id: newUser._id?.toString(),
-                    email: newUser?.email,
-                    name: newUser?.name,
-                    role: newUser?.role,
-                },
-                `${config.jwt_access_secret}`,
-                {
-                    expiresIn: "2 days",
-                }
-            );
+  // tumi delete hye gso  kintu tumar refresh token ase
+  // checking deleted user's refresh token
 
-            return {
-                accessToken,
-            };
-        }
-
-        // If user is deleted, block access
-        if (foundUser.isDeleted) {
-            throw new AppError(
-                httpStatus.NOT_FOUND,
-                "This Account Has Been Deleted."
-            );
-        }
-
-        // Generate JWT for the existing user
-        const accessToken = jwt.sign(
-            {
-                _id: foundUser._id?.toString(),
-                email: foundUser?.email,
-                name: foundUser?.name,
-                role: foundUser?.role,
-            },
-            `${config.jwt_access_secret}`,
-            {
-                expiresIn: "2 days",
-            }
-        );
-
-        return {
-            accessToken,
-        };
-    } catch (error: any) {
-        throw new AppError(httpStatus.INTERNAL_SERVER_ERROR, error.message || "Something went wrong during Google login");
+  const foundUser = await User.isUserExists(userId);
+  if (!foundUser) {
+    throw new AppError(httpStatus.NOT_FOUND, "User does not exist");
+  }
+  //generate new token
+  const newAccessToken = jwt.sign(
+    {
+      _id: foundUser._id?.toString(),
+      email: foundUser?.email,
+      name: foundUser?.name,
+      role: foundUser?.role,
+    },
+    `${config.jwt_access_secret}`,
+    {
+   
+      expiresIn: "2 days",
     }
+  );
+
+  return {
+    accessToken: newAccessToken,
+  };
+};
+
+const googleLogin = async (payload: {
+  email: string;
+  name: string;
+  password: string;
+  googleUid: string;
+  image?: string;
+  phone?: string;
+}) => {
+  try {
+    // Check if the user exists
+    const foundUser = await User.isUserExists(payload.email);
+
+    if (!foundUser) {
+      // If user doesn't exist, register them
+      const newUser = await User.create({
+        email: payload.email,
+        name: payload.name,
+        password: payload.password,
+        googleUid: payload.googleUid,
+        image: payload.image,
+        phone: payload.phone,
+        role: "company", // Default role for new users
+      });
+
+      // Generate JWT for the new user
+      const accessToken = jwt.sign(
+        {
+          _id: newUser._id?.toString(),
+          email: newUser?.email,
+          name: newUser?.name,
+          role: newUser?.role,
+        },
+        `${config.jwt_access_secret}`,
+        {
+          expiresIn: "2 days",
+        }
+      );
+
+      return {
+        accessToken,
+      };
+    }
+
+    // If user is deleted, block access
+    if (foundUser.isDeleted) {
+      throw new AppError(
+        httpStatus.NOT_FOUND,
+        "This Account Has Been Deleted."
+      );
+    }
+
+    // Generate JWT for the existing user
+    const accessToken = jwt.sign(
+      {
+        _id: foundUser._id?.toString(),
+        email: foundUser?.email,
+        name: foundUser?.name,
+        role: foundUser?.role,
+      },
+      `${config.jwt_access_secret}`,
+      {
+        expiresIn: "2 days",
+      }
+    );
+
+    return {
+      accessToken,
+    };
+  } catch (error: any) {
+    throw new AppError(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      error.message || "Something went wrong during Google login"
+    );
+  }
 };
 
 const createUserIntoDB = async (payload: TCreateUser) => {
-    const user = await User.isUserExists(payload.email);
-    if (user) {
-        throw new AppError(httpStatus.NOT_FOUND, "This user is already exits!");
-    }
-    const result = await User.create(payload);
-    return result;
+  const user = await User.isUserExists(payload.email);
+  if (user) {
+    throw new AppError(httpStatus.NOT_FOUND, "This user is already exits!");
+  }
+  const result = await User.create(payload);
+  return result;
 };
 
-const EmailSendOTP = async(email: string) => {
-    const user = await User.isUserExists(email);
-    if (!user) {
-        throw new AppError(httpStatus.NOT_FOUND, "No User Found");
-    }
-    // Generate OTP 
-    const otp = Math.floor(1000 + Math.random() * 9000).toString(); // 4-digit OTP
-    await User.updateOne({ email }, { otp });
-    // send email
-}
+const EmailSendOTP = async (email: string) => {
+  const user = await User.isUserExists(email);
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, "No User Found");
+  }
+  // Generate OTP
+  const otp = Math.floor(1000 + Math.random() * 9000).toString(); // 4-digit OTP
+  await User.updateOne({ email }, { otp });
+  // send email
+};
 
 const verifyEmailIntoDB = async (email: string, otp: string) => {
-    const foundUser = await User.isUserExists(email.toLowerCase());
-    if (!foundUser) {
-      throw new AppError(httpStatus.NOT_FOUND, "Email is not correct");
-    }
-  
-     // Check if the OTP matches
-     if (foundUser.otp !== otp) {
-        throw new AppError(httpStatus.BAD_REQUEST, "Invalid OTP!");
-    }
-    await User.updateOne(
-        { email },
-        { authorized: true }
-    );
+  const foundUser = await User.isUserExists(email.toLowerCase());
+  if (!foundUser) {
+    throw new AppError(httpStatus.NOT_FOUND, "Email is not correct");
+  }
+
+  // Check if the OTP matches
+  if (foundUser.otp !== otp) {
+    throw new AppError(httpStatus.BAD_REQUEST, "Invalid OTP!");
+  }
+  await User.updateOne({ email }, { authorized: true });
 };
 
 // const forgetPassword = async (email: string) => {
@@ -165,52 +226,51 @@ const verifyEmailIntoDB = async (email: string, otp: string) => {
 //   sendEmail(user.email, resetUILink);
 // };
 
-
 const forgetPasswordOtp = async (email: string) => {
-    const user = await User.isUserExists(email);
-    if (!user) {
-        throw new AppError(httpStatus.NOT_FOUND, "This user is not found !");
-    }
-
+  const user = await User.isUserExists(email);
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, "This user is not found !");
+  }
 };
 
 const resetPassword = async (
-    payload: { email: string; newPassword: string },
-    token: string
+  payload: { email: string; newPassword: string },
+  token: string
 ) => {
-    const user = await User.isUserExists(payload?.email);
-    if (!user) {
-        throw new AppError(httpStatus.NOT_FOUND, "This user is not found !");
+  const user = await User.isUserExists(payload?.email);
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, "This user is not found !");
+  }
+
+  const decoded = jwt.verify(
+    token,
+    config.jwt_access_secret as string
+  ) as JwtPayload;
+
+  if (payload.email !== decoded.email) {
+    throw new AppError(httpStatus.FORBIDDEN, "You are forbidden!");
+  }
+
+  const newHashedPassword = await bcrypt.hash(
+    payload.newPassword,
+    Number(config.bcrypt_salt_rounds)
+  );
+
+  await User.findOneAndUpdate(
+    { email: decoded.email, role: decoded.role },
+    {
+      password: newHashedPassword,
     }
-
-    const decoded = jwt.verify(
-        token,
-        config.jwt_access_secret as string
-    ) as JwtPayload;
-
-    if (payload.email !== decoded.email) {
-        throw new AppError(httpStatus.FORBIDDEN, "You are forbidden!");
-    }
-
-    const newHashedPassword = await bcrypt.hash(
-        payload.newPassword,
-        Number(config.bcrypt_salt_rounds)
-    );
-
-    await User.findOneAndUpdate(
-        { email: decoded.email, role: decoded.role },
-        {
-            password: newHashedPassword,
-        }
-    );
+  );
 };
 
 export const AuthServices = {
-    checkLogin,
-    createUserIntoDB,
-    resetPassword,
-    forgetPasswordOtp,
-    googleLogin,
-    verifyEmailIntoDB,
-    EmailSendOTP
+  checkLogin,
+  createUserIntoDB,
+  resetPassword,
+  forgetPasswordOtp,
+  googleLogin,
+  verifyEmailIntoDB,
+  EmailSendOTP,
+  refreshToken,
 };

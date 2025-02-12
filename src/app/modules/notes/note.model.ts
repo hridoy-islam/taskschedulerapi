@@ -30,7 +30,13 @@ const noteSchema = new Schema<TNote>(
     isArchive:{
       type: Boolean,
       default: false,
-    }
+    },
+    sharedWith:[
+      {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ]
   },
   {
     timestamps: true,

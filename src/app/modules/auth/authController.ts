@@ -5,6 +5,7 @@ import { AuthServices } from "./auth.service";
 import { sendEmail } from "../../utils/sendEmail";
 import { PasswordResetServices } from "../passwordReset/passwordReset.service";
 
+
 const login = catchAsync(async (req, res) => {
   const result = await AuthServices.checkLogin(req.body);
   const { accessToken } = result;
@@ -21,6 +22,26 @@ const login = catchAsync(async (req, res) => {
       accessToken,
     },
   });
+});
+const refreshToken = catchAsync(async (req, res) => {
+  const { refreshToken } = req.cookies;
+
+  const result = await AuthServices.refreshToken(refreshToken);
+
+  // set refresh token into cookie
+  const cookieOptions = {
+    secure: config.env === 'production',
+    httpOnly: true,
+  };
+
+  res.cookie('refreshToken', refreshToken, cookieOptions);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: 'User logged in successfully !',
+    data: result,
+});
 });
 
 const googleLoginController = catchAsync(async (req, res) => {
@@ -120,5 +141,6 @@ export const AuthControllers = {
   googleLoginController,
   validateReset,
   verifyEmail,
-  emailVerifySendOtp
+  emailVerifySendOtp,
+  refreshToken
 };

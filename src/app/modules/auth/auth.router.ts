@@ -10,6 +10,11 @@ router.post(
   validateRequest(AuthValidations.loginValidationSchema),
   AuthControllers.login
 );
+router.post(
+  '/refresh-token',
+  validateRequest(AuthValidations.refreshTokenZodSchema),
+  AuthControllers.refreshToken
+);
 
 router.post(
   "/google",

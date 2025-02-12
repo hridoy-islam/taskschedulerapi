@@ -70,7 +70,7 @@ const getAllUserByCompany = async (userId: string) => {
   // Determine the user's role and set the query accordingly
   if (user.role === 'admin' || user.role === 'director') {
     // Only fetch users with roles 'admin' or 'director' for admin and director users
-    const query = { role: { $in: ['admin', 'director'] } };
+    const query = { role: { $in: ['admin', 'director','company'] } };
     const filteredUsers = await User.find(query).lean();
     return filteredUsers;
   }
