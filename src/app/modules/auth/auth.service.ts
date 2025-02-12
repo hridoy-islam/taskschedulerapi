@@ -4,10 +4,12 @@ import { User } from "../user/user.model";
 import { TCreateUser, TLogin } from "./auth.interface";
 import bcrypt from "bcrypt";
 import jwt, { JwtPayload } from "jsonwebtoken";
-import config from "../../config";
+
 import { createToken } from "./auth.utils";
 import { sendEmail } from "../../utils/sendEmail";
 import { jwtHelpers } from "../../helpers/jwtHelpers";
+import { Secret } from 'jsonwebtoken';
+import config from '../../config';
 
 const checkLogin = async (payload: TLogin) => {
   try {
@@ -64,7 +66,7 @@ const refreshToken = async (token: string) => {
   try {
     verifiedToken = jwtHelpers.verifyToken(
       token,
-      config.jwt.refresh_secret as Secret
+      config.jwt_refresh_secret as Secret
     );
   } catch (err) {
     throw new AppError(httpStatus.FORBIDDEN, "Invalid Refresh Token");

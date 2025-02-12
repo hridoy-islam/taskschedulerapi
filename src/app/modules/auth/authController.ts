@@ -4,11 +4,12 @@ import sendResponse from "../../utils/sendResponse";
 import { AuthServices } from "./auth.service";
 import { sendEmail } from "../../utils/sendEmail";
 import { PasswordResetServices } from "../passwordReset/passwordReset.service";
+import config from "../../config";
 
 
 const login = catchAsync(async (req, res) => {
   const result = await AuthServices.checkLogin(req.body);
-  const { accessToken } = result;
+  const { accessToken,refreshToken } = result;
 
   // res.cookie('refreshToken', refreshToken, {
   //   secure: config.NODE_ENV === 'production',
@@ -20,6 +21,7 @@ const login = catchAsync(async (req, res) => {
     message: "Logged In Successfully",
     data: {
       accessToken,
+      refreshToken
     },
   });
 });
