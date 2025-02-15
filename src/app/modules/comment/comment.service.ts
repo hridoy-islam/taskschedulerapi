@@ -4,6 +4,7 @@ import { User } from "../user/user.model";
 import { TComment } from "./comment.interface";
 import { Comment } from "./comment.model";
 import { getIO } from "../../../socket";
+import { Types } from "mongoose";
 
 const createCommentIntoDB = async (payload: TComment) => {
 
@@ -54,6 +55,7 @@ const createCommentIntoDB = async (payload: TComment) => {
   return result;
 };
 
+
 const getCommentsFromDB = async (id: string, user: any) => {
   const result = await Comment.find({ taskId: id }).populate({
     path: 'authorId', // Populate the author's ID for the comment
@@ -73,11 +75,14 @@ const getCommentsFromDB = async (id: string, user: any) => {
 
 
   await Comment.updateMany(
-    { taskId: id },
+    { taskId: new Types.ObjectId(id) },
     { $addToSet: { seenBy: user._id } } // Add the user ID to `seenBy` if not already present
   );
   return result;
 }
+
+
+
 
 export const CommentServices = {
   createCommentIntoDB,

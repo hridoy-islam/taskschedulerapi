@@ -5,6 +5,8 @@ import { NoteSearchableFields } from "./note.constant";
 import { User } from "../user/user.model";
 import mongoose, { Types } from "mongoose";
 import { query } from "express";
+import { getIO } from "../../../socket";
+import { NotificationService } from "../notification/notification.service";
 
 const { ObjectId } = mongoose.Types;
 
@@ -163,6 +165,97 @@ const getSharedNoteByIdFromDB = async (userId: string, query: Record<string, unk
     };
   }
 };
+
+
+// const getSharedNoteByIdFromDB = async (userId: string, query: Record<string, unknown>) => {
+//   try {
+//     const userIdObj = new ObjectId(userId);
+
+//     // Build query to search notes where userId is present in 'sharedWith' array
+//     const noteQuery = new QueryBuilder(
+//       Note.find({ sharedWith: { $in: [userIdObj] } }),
+//       query
+//     )
+//       .search(NoteSearchableFields)  // Apply search logic based on NoteSearchableFields
+//       .filter()                     // Apply filter conditions
+//       .sort()                        // Apply sorting
+//       .paginate()                    // Apply pagination
+//       .fields();                     // Select specific fields if needed
+
+//     // Count total documents based on the query
+//     const meta = await Note.countDocuments({ sharedWith: { $in: [userIdObj] } });
+
+//     // Execute the query to get the actual results
+//     const result = await noteQuery.modelQuery.exec();
+
+//     if (!result.length) {
+//       return { meta: 0, result: [] };
+//     }
+
+//     // Step 1: Fetch all users who have the note shared with them
+//     const sharedWithUsers = await User.find({ _id: { $in: result[0]?.sharedWith } });
+
+//     // Step 2: Track notified users across all notes
+//     const notifiedUserIds = new Set();
+
+//     // Step 3: Get the author of the note
+//     const author = await User.findById(result[0]?.authorID); // Assuming notes have an authorId field
+
+//     if (author) {
+//       // Step 4: Loop through each user in 'sharedWith' and send notifications
+//       for (const assigned of sharedWithUsers) {
+//         const assignedId = assigned._id.toString(); // Convert ObjectId to string
+
+//         // Debug: Log user notification status
+//         console.log(`Checking notification for user: ${assigned}`);
+
+//         // Step 5: Check if the user has already been notified
+//         if (notifiedUserIds.has(assignedId)) {
+//           console.log(`User ${assignedId} already notified, skipping.`);
+//           continue; // Skip if already notified
+//         }
+
+//         // Step 6: Create the notification
+//         const notification = await NotificationService.createNotificationIntoDB({
+//           userId: assigned._id, // User receiving the notification
+//           senderId: author._id, // User creating the task
+//           type: "note",
+//           message: `${author.name} shared a new note with you titled "${result[0]?.title}"`,
+//         });
+
+//         // Debug: Log notification creation
+//         console.log(`Created notification for user: ${assignedId}`, notification);
+
+//         // Step 7: Send the notification in real-time using WebSocket
+//         const io = getIO();
+//         io.to(assignedId).emit("notification", notification);
+
+//         // Debug: Log WebSocket notification
+//         console.log(`Sent real-time notification to user: ${assignedId}`);
+
+//         // Step 8: Mark this user as notified
+//         notifiedUserIds.add(assignedId);
+//       }
+//     }
+
+//     // Step 9: Return the fetched notes and meta data
+//     return {
+//       meta,  // Total number of notes shared with the user
+//       result, // Fetched notes with author and tags populated
+//     };
+//   } catch (error) {
+//     console.error('Error fetching shared notes by user:', error);
+//     return {
+//       meta: 0,
+//       result: [],  // Return an empty result in case of error
+//     };
+//   }
+// };
+
+
+
+
+
 
 const updateNoteIntoDB = async (id: string, payload: Partial<TNote>) => {
   try{

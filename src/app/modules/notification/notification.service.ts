@@ -27,6 +27,19 @@ const getNotificationsFromDB = async (userId: string, query: Record<string, unkn
   };
 
 
+  // Check if a notification already exists for a user and note
+const findNotification = async ({ userId, noteId }: { userId: string; noteId: string }) => {
+  try {
+    // Query for an existing notification based on userId and noteId
+    const notification = await Notification.findOne({ userId, noteId });
+    return notification; // Returns null if no notification found
+  } catch (error) {
+    console.error("Error checking for existing notification:", error);
+    throw new Error("Error checking for existing notification");
+  }
+};
+
+
   // Mark a notification as read
 export const markAsReadIntoDB = async (notificationId: string) => {
     const result = await Notification.findByIdAndUpdate(notificationId, { isRead: true });
@@ -36,5 +49,6 @@ export const markAsReadIntoDB = async (notificationId: string) => {
 export const NotificationService = {
     createNotificationIntoDB,
     getNotificationsFromDB,
-    markAsReadIntoDB
+    markAsReadIntoDB,
+    findNotification
 };

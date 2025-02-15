@@ -64,7 +64,7 @@ const emailSentOtpSchema = z.object({
 
 
   const refreshTokenZodSchema = z.object({
-    cookies: z.object({
+    body: z.object({
       refreshToken: z.string({
         required_error: 'Refresh Token is required',
   }),

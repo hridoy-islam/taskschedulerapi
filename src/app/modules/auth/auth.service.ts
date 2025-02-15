@@ -5,11 +5,13 @@ import { TCreateUser, TLogin } from "./auth.interface";
 import bcrypt from "bcrypt";
 import jwt, { JwtPayload } from "jsonwebtoken";
 
-import { createToken } from "./auth.utils";
+import { createToken, verifyToken } from "./auth.utils";
 import { sendEmail } from "../../utils/sendEmail";
 import { jwtHelpers } from "../../helpers/jwtHelpers";
 import { Secret } from 'jsonwebtoken';
 import config from '../../config';
+import catchAsync from "../../utils/catchAsync";
+import sendResponse from "../../utils/sendResponse";
 
 const checkLogin = async (payload: TLogin) => {
   try {
@@ -36,7 +38,7 @@ const checkLogin = async (payload: TLogin) => {
       },
       `${config.jwt_access_secret}`,
       {
-        expiresIn: "2 days",
+        expiresIn: "4 days",
       }
     );
 
@@ -47,7 +49,10 @@ const checkLogin = async (payload: TLogin) => {
         name: foundUser?.name,
         role: foundUser?.role,
       },
-      `${config.jwt_refresh_secret}`
+      `${config.jwt_refresh_secret}`,
+       {
+        expiresIn: "7 days", // Refresh Token expires in 7 days
+      }
     );
 
     return {
@@ -59,9 +64,13 @@ const checkLogin = async (payload: TLogin) => {
   }
 };
 
+
 const refreshToken = async (token: string) => {
-  //verify token
-  // invalid token - synchronous
+  if (!token || typeof token !== "string") {
+    throw new AppError(httpStatus.BAD_REQUEST, "Refresh token is required and should be a valid string.");
+  }
+
+  // Verify token
   let verifiedToken = null;
   try {
     verifiedToken = jwtHelpers.verifyToken(
@@ -71,17 +80,16 @@ const refreshToken = async (token: string) => {
   } catch (err) {
     throw new AppError(httpStatus.FORBIDDEN, "Invalid Refresh Token");
   }
-
   const { userId } = verifiedToken;
+  console.log(userId)
 
-  // tumi delete hye gso  kintu tumar refresh token ase
-  // checking deleted user's refresh token
-
+  // Check if user exists (deleted user case)
   const foundUser = await User.isUserExists(userId);
   if (!foundUser) {
     throw new AppError(httpStatus.NOT_FOUND, "User does not exist");
   }
-  //generate new token
+
+  // Generate new token
   const newAccessToken = jwt.sign(
     {
       _id: foundUser._id?.toString(),
@@ -91,8 +99,7 @@ const refreshToken = async (token: string) => {
     },
     `${config.jwt_access_secret}`,
     {
-   
-      expiresIn: "2 days",
+      expiresIn: "4 days",
     }
   );
 
@@ -100,6 +107,10 @@ const refreshToken = async (token: string) => {
     accessToken: newAccessToken,
   };
 };
+
+
+
+
 
 const googleLogin = async (payload: {
   email: string;

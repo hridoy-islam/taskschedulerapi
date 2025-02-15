@@ -21,6 +21,10 @@ const commentSchema = new Schema<TComment>(
       required: true,
       ref: "User",
     },
+    seenBy:[{
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    }]
     
   },
   {
