@@ -38,7 +38,7 @@ const checkLogin = async (payload: TLogin) => {
       },
       `${config.jwt_access_secret}`,
       {
-        expiresIn: "4 days",
+        expiresIn: "2 days",
       }
     );
 
@@ -51,10 +51,10 @@ const checkLogin = async (payload: TLogin) => {
       },
       `${config.jwt_refresh_secret}`,
        {
-        expiresIn: "7 days", // Refresh Token expires in 7 days
+        expiresIn: "4 days", // Refresh Token expires in 7 days
       }
     );
-
+    await User.updateOne({ _id: foundUser._id }, { refreshToken });
     return {
       accessToken,
       refreshToken,
@@ -65,49 +65,62 @@ const checkLogin = async (payload: TLogin) => {
 };
 
 
+
 const refreshToken = async (token: string) => {
   if (!token || typeof token !== "string") {
     throw new AppError(httpStatus.BAD_REQUEST, "Refresh token is required and should be a valid string.");
   }
+console.log(token)
+  // 🔥 Check if the token exists in the database
+  const foundUser = await User.findOne({ 
+    refreshToken: { $eq: token } });
 
-  // Verify token
-  let verifiedToken = null;
-  try {
-    verifiedToken = jwtHelpers.verifyToken(
-      token,
-      config.jwt_refresh_secret as Secret
-    );
-  } catch (err) {
-    throw new AppError(httpStatus.FORBIDDEN, "Invalid Refresh Token");
-  }
-  const { userId } = verifiedToken;
-  console.log(userId)
+  
 
-  // Check if user exists (deleted user case)
-  const foundUser = await User.isUserExists(userId);
   if (!foundUser) {
-    throw new AppError(httpStatus.NOT_FOUND, "User does not exist");
+    throw new AppError(httpStatus.BAD_REQUEST, "Invalid refresh token");
   }
 
-  // Generate new token
-  const newAccessToken = jwt.sign(
-    {
-      _id: foundUser._id?.toString(),
-      email: foundUser?.email,
-      name: foundUser?.name,
-      role: foundUser?.role,
-    },
-    `${config.jwt_access_secret}`,
-    {
-      expiresIn: "4 days",
-    }
-  );
+  try {
+    // ✅ Fix: Await `jwt.verify()` to properly handle async
+    const decoded = jwt.verify(token,  `${config.jwt_refresh_secret}`,);
 
-  return {
-    accessToken: newAccessToken,
-  };
+    // Generate new access token
+    const newAccessToken = jwt.sign(
+      {
+        _id: foundUser._id.toString(),
+        email: foundUser.email,
+        name: foundUser.name,
+        role: foundUser.role,
+      },
+      `${config.jwt_access_secret}`,
+      { expiresIn: "2 days" }
+    );
+
+    // Generate new refresh token (optional rotation)
+    const newRefreshToken = jwt.sign(
+      {
+        _id: foundUser._id.toString(),
+        email: foundUser.email,
+        name: foundUser.name,
+        role: foundUser.role,
+      },
+      `${config.jwt_refresh_secret}`,
+      { expiresIn: "4 days" }
+    );
+
+    // 🔥 Update refresh token in the database
+    foundUser.refreshToken = newRefreshToken;
+    await foundUser.save();
+
+    return {
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken,
+    };
+  } catch (err) {
+    throw new AppError(httpStatus.BAD_REQUEST, "Invalid Refresh Token");
+  }
 };
-
 
 
 

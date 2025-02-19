@@ -18,6 +18,7 @@ export interface TUser {
   phone?: string;
   googleUid?: string;
   otp?:string;
+  refreshToken?:string
 }
 
 export interface UserModel extends Model<TUser> {

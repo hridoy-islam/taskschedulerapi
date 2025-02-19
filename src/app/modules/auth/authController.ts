@@ -31,13 +31,6 @@ const refreshToken = catchAsync(async (req, res) => {
 
   const result = await AuthServices.refreshToken(refreshToken);
 
-  // set refresh token into cookie
-  const cookieOptions = {
-    secure: config.env === 'production',
-    httpOnly: true,
-  };
-
-  res.cookie('refreshToken', refreshToken, cookieOptions);
 
   sendResponse(res, {
     statusCode: 200,

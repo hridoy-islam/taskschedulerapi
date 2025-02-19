@@ -63,7 +63,10 @@ const userSchema = new Schema<TUser, UserModel>(
     },
     otp: {
       type: String,
-    }
+    },
+    refreshToken: {
+      type: String,
+    },
   },
   {
     timestamps: true,
@@ -74,7 +77,10 @@ const userSchema = new Schema<TUser, UserModel>(
 userSchema.pre("save", async function (next) {
   const user = this; // doc
   if (user.isModified("password")) {
-    user.password = await bcrypt.hash(user.password, Number(config.bcrypt_salt_rounds));
+    user.password = await bcrypt.hash(
+      user.password,
+      Number(config.bcrypt_salt_rounds)
+    );
   }
   next();
 });
