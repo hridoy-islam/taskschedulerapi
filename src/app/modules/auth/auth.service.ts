@@ -70,7 +70,7 @@ const refreshToken = async (token: string) => {
   if (!token || typeof token !== "string") {
     throw new AppError(httpStatus.BAD_REQUEST, "Refresh token is required and should be a valid string.");
   }
-console.log(token)
+
   // 🔥 Check if the token exists in the database
   const foundUser = await User.findOne({ 
     refreshToken: { $eq: token } });

@@ -66,6 +66,7 @@ const userSchema = new Schema<TUser, UserModel>(
     },
     refreshToken: {
       type: String,
+      select:false
     },
   },
   {

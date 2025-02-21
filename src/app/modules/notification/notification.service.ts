@@ -9,7 +9,7 @@ const createNotificationIntoDB = async (payload: TNotification) => {
 
 const getNotificationsFromDB = async (userId: string, query: Record<string, unknown>) => {
     // Start building the query
-    const notificationQuery = new QueryBuilder( Notification.find({ userId }).populate("senderId userId"), query)
+    const notificationQuery = new QueryBuilder( Notification.find({ userId }).populate("senderId").populate("userId"), query)
       .filter() // Apply filters
       .sort() // Apply sorting
       .paginate() // Apply pagination

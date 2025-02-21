@@ -320,7 +320,7 @@ const updateNoteIntoDB = async (noteId: string, payload: Partial<TNote>) => {
         const io = getIO();
         notificationsToCreate.forEach((notification) => {
           if (notification) {
-            console.log(`Sending notification to user: ${notification.userId}`);
+          
             io.to(notification.userId.toString()).emit("notification", notification);
           }
         });

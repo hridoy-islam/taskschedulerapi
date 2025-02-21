@@ -26,7 +26,7 @@ const getAllTagsFromDB = async (query: Record<string, unknown>) => {
 };
 
 const getAllTagsForUserFromDB = async (userId:string,query: Record<string, unknown>) => {
-  const noteQuery = new QueryBuilder(Tag.find({ author: userId }), query)
+  const noteQuery = new QueryBuilder(Tag.find({ author: userId }).populate("author"), query)
     .search(TagsSearchableFields)
     .filter()
     .sort()
@@ -38,7 +38,7 @@ const getAllTagsForUserFromDB = async (userId:string,query: Record<string, unkno
 
   return {
     meta,
-    result,
+    result: result.filter(tag => tag.author._id.toString() === userId),
   };
 };
 

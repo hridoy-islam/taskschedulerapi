@@ -4,8 +4,8 @@ import { TNotification } from "./notification.interface";
 
 const notificationSchema = new Schema<TNotification>(
   {
-    userId: { type: Schema.Types.ObjectId, required: true }, // The user to whom the notification is sent
-    senderId: { type: Schema.Types.ObjectId, required: true }, // The user sending the notification
+    userId: { type: Schema.Types.ObjectId, required: true, ref:"User" }, // The user to whom the notification is sent
+    senderId: { type: Schema.Types.ObjectId, required: true, ref:"User" }, // The user sending the notification
     type: { type: String, required: true }, // Notification title
     message: { type: String, required: true }, // Notification message
     isRead: { type: Boolean, default: false }, // Read/unread status

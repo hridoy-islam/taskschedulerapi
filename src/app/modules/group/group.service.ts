@@ -178,8 +178,8 @@ const getSingleGroupFromDB = async (id: string, requester: any) => {
   // Fetch the group by ID and populate member details
   const groupData = await Group.findById(id).populate({
     path: "members._id",
-    select: "name email",
-    transform: (user) => (user ? { name: user.name, email: user.email, _id:user._id } : null),
+    select: "name email image",
+    transform: (user) => (user ? { name: user.name, email: user.email, _id:user._id, image: user.image } : null),
   });
 
   if (!groupData) {
@@ -204,9 +204,12 @@ const getSingleGroupFromDB = async (id: string, requester: any) => {
         userDetails && typeof userDetails === "object" && "email" in userDetails
           ? userDetails.email
           : null,
+      image: typeof userDetails === "object" && "image" in userDetails
+      ? userDetails.image: null,
       role: member.role,
       acceptInvitation: member.acceptInvitation,
       lastMessageReadId: member.lastMessageReadId,
+     
     };
   });
 
@@ -221,6 +224,7 @@ const getSingleGroupFromDB = async (id: string, requester: any) => {
     createdAt: groupData.createdAt,
     updatedAt: groupData.updatedAt,
     messageCount,
+    
   };
 };
 

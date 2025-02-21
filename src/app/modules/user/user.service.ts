@@ -66,7 +66,7 @@ const getAllUserByCompany = async (userId: string) => {
   // Determine the user's role and set the query accordingly
   if (user.role === 'admin' || user.role === 'director') {
     // Only fetch users with roles 'admin' or 'director' for admin and director users
-    const query = { role: { $in: ['admin', 'director'] } };
+    const query = { role: { $in: ['admin', 'director'] },  isDeleted: false};
     const filteredUsers = await User.find(query).lean();
     return filteredUsers;
   }
@@ -78,6 +78,9 @@ const getAllUserByCompany = async (userId: string) => {
       isDeleted: false
     };
     const companyUsers = await User.find(query).lean();
+    if (!companyUsers.some(existingUser => existingUser._id.toString() === user._id.toString())) {
+      companyUsers.unshift(user);  // Add the user to the list
+    }
     return companyUsers // Return users from the same company
   }
 
@@ -99,6 +102,11 @@ const getAllUserByCompany = async (userId: string) => {
         users.unshift(company); // Insert the company at the beginning
       }
     }
+
+
+    if (!users.some(existingUser => existingUser._id.toString() === user._id.toString())) {
+      users.unshift(user);  // Add the user to the list
+    }
   
     return users;
   }
@@ -118,10 +126,15 @@ const getAllUserByCompany = async (userId: string) => {
     }
     const colleagues = await User.find(query).lean(); // Fetch colleagues based on the query
   
+      // Include the user's own ID in the list if it's not already included
+  if (!colleagues.some(existingUser => existingUser._id.toString() === user._id.toString())) {
+    colleagues.unshift(user); // Add the user to the colleagues list
+  }
+
     return colleagues; // Return only the colleagues
   }
 
-
+  
   const users = await User.find(query);
   return users;
 };
