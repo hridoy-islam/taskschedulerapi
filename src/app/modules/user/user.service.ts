@@ -65,11 +65,16 @@ const getAllUserByCompany = async (userId: string) => {
 
   // Determine the user's role and set the query accordingly
   if (user.role === 'admin' || user.role === 'director') {
-    // Only fetch users with roles 'admin' or 'director' for admin and director users
-    const query = { role: { $in: ['admin', 'director'] },  isDeleted: false};
-    const filteredUsers = await User.find(query).lean();
+    // Fetch users with roles 'admin' or 'director' and not deleted
+    const query = { role: { $in: ['admin', 'director'] }, isDeleted: false };
+    let filteredUsers = await User.find(query).lean();
+  
+    // Move the current user to the top of the list
+    filteredUsers = filteredUsers.sort((a, b) => (a._id.toString() === user.id ? -1 : b._id.toString() === user.id ? 1 : 0));
+  
     return filteredUsers;
   }
+  
 
   else if (user.role === 'company') {
     const query = { 

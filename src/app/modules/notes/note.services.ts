@@ -258,17 +258,14 @@ const getSharedNoteByIdFromDB = async (userId: string, query: Record<string, unk
 
 const updateNoteIntoDB = async (noteId: string, payload: Partial<TNote>) => {
   try {
-    // Fetch the note first
     console.log(`Fetching note with ID: ${noteId}`);
     const note = await Note.findById(noteId);
     if (!note) throw new Error("Note not found");
 
-    // Fetch the author using note.author
     console.log(`Fetching author with ID: ${note.author}`);
     const author = await User.findById(note.author);
     if (!author) throw new Error("Author not found");
 
-    // Update the note
     console.log(`Updating note with ID: ${noteId}`);
     const result = await Note.findByIdAndUpdate(noteId, payload, {
       new: true,
@@ -279,23 +276,21 @@ const updateNoteIntoDB = async (noteId: string, payload: Partial<TNote>) => {
     if (!result) throw new Error("Note update failed");
     console.log(`Note updated successfully: ${result.title}`);
 
-    // Check shared users and send notifications
-    if (result.sharedWith && result.sharedWith.length > 0) {
-      console.log(`Shared with users: ${result.sharedWith}`);
+    // Send notification ONLY when the note is shared, not when it's updated
+    if (
+      result.sharedWith &&
+      result.sharedWith.length > 0 &&
+      (!note.sharedWith || note.sharedWith.length === 0) // Ensures notification is sent only when first shared
+    ) {
 
-      // Get all users in the sharedWith array
-      const assignedUsers = await User.find({
-        _id: { $in: result.sharedWith },
-      });
-      console.log(`Found ${assignedUsers.length} shared users`);
+      const assignedUsers = await User.find({ _id: { $in: result.sharedWith } });
 
       const notificationsToCreate = [];
 
-      // Loop through assigned users and create notifications
       for (const assigned of assignedUsers) {
         if (!assigned) {
-          console.log("User not found, skipping.");
-          continue; // Skip if user not found
+          // console.log("User not found, skipping.");
+          continue;
         }
 
         const notification = await NotificationService.createNotificationIntoDB({
@@ -312,15 +307,12 @@ const updateNoteIntoDB = async (noteId: string, payload: Partial<TNote>) => {
         }
       }
 
-      // Log the number of notifications created
-      console.log(`Created ${notificationsToCreate.length} notifications`);
-      
+      // console.log(`Created ${notificationsToCreate.length} notifications`);
+
       if (notificationsToCreate.length > 0) {
-        // Send notifications in real-time using WebSocket
         const io = getIO();
         notificationsToCreate.forEach((notification) => {
           if (notification) {
-          
             io.to(notification.userId.toString()).emit("notification", notification);
           }
         });
@@ -328,7 +320,7 @@ const updateNoteIntoDB = async (noteId: string, payload: Partial<TNote>) => {
         console.log("No new notifications to send.");
       }
     } else {
-      console.log("No users to notify for this note.");
+      console.log("No users to notify for this note update.");
     }
 
     return result;
@@ -337,7 +329,6 @@ const updateNoteIntoDB = async (noteId: string, payload: Partial<TNote>) => {
     throw new Error("Failed to update note");
   }
 };
-
 
 
 
