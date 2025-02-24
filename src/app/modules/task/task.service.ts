@@ -40,25 +40,24 @@ const createTaskIntoDB = async (payload: TTask) => {
   payload.lastSeen = lastSeen;
 
   const result = await Task.create(payload);
+
+   
+  //  Ensure notification is not sent to the author
   
-  if (author._id.toString() === assigned._id.toString()) {
-    // If both are the same, skip creating and sending the notification
-    return result;
+  if (author._id.toString() !== assigned._id.toString()) {
+    // Step 2: Create a notification for the assigned user
+    const notification = await NotificationService.createNotificationIntoDB({
+      userId: assigned._id, // User receiving the notification
+      senderId: author._id, // User creating the task
+      type: "task",
+      message: `${author.name} assigned a new task "${result.taskName}"`,
+    });
+
+    // Step 3: Send the notification in real-time using WebSocket
+    const io = getIO();
+    const assignedId = assigned._id.toString(); // Convert ObjectId to string
+    io.to(assignedId).emit("notification", notification);
   }
-  // Step 2: Create a notification for the assigned user
-  const notification = await NotificationService.createNotificationIntoDB({
-    userId: assigned._id, // User receiving the notification
-    senderId: author._id, // User creating the task
-    type: "task",
-    message: `${author.name} assigned a new task "${result.taskName}"`
-  });
-
-  //
-
-  // Step 3: Send the notification in real-time using WebSocket
-  const io = getIO();
-  const assignedId = assigned._id.toString(); // Convert ObjectId to string
-  io.to(assignedId).emit("notification", notification);
 
   return result;
 };
