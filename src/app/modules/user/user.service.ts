@@ -66,7 +66,10 @@ const getAllUserByCompany = async (userId: string) => {
   // Determine the user's role and set the query accordingly
   if (user.role === 'admin' || user.role === 'director') {
     // Fetch users with roles 'admin' or 'director' and not deleted
-    const query = { role: { $in: ['admin', 'director'] }, isDeleted: false };
+    const query = { $or: [
+      { role: { $in: ['admin', 'director'] } }, // Fetch admins and directors
+      { _id: { $in: user.colleagues || [] } }  // Include the user's colleagues
+    ], isDeleted: false };
     let filteredUsers = await User.find(query).lean();
   
     // Move the current user to the top of the list
@@ -83,6 +86,14 @@ const getAllUserByCompany = async (userId: string) => {
       isDeleted: false
     };
     const companyUsers = await User.find(query).lean();
+
+      // Include colleagues in the query
+      if (user.colleagues?.length) {
+        const colleagues = await User.find({ _id: { $in: user.colleagues }, isDeleted: false }).lean();
+        companyUsers.push(...colleagues);
+      }
+
+      
     if (!companyUsers.some(existingUser => existingUser._id.toString() === user._id.toString())) {
       companyUsers.unshift(user);  // Add the user to the list
     }
@@ -109,6 +120,12 @@ const getAllUserByCompany = async (userId: string) => {
     }
 
 
+ // Include colleagues in the query
+ if (user.colleagues?.length) {
+  const colleagues = await User.find({ _id: { $in: user.colleagues }, isDeleted: false }).lean();
+  users.push(...colleagues);
+}
+
     if (!users.some(existingUser => existingUser._id.toString() === user._id.toString())) {
       users.unshift(user);  // Add the user to the list
     }
@@ -123,7 +140,7 @@ const getAllUserByCompany = async (userId: string) => {
     const colleaguesIds = user.colleagues || [];
     query.$or = [
       { _id: { $in: colleaguesIds } }, // Fetch users from the colleagues array
-      { company: user.company }, // Include users from the same company
+      // { company: user.company }, // Include users from the same company
   
     ];
     if (user.company) {

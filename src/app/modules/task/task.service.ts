@@ -97,37 +97,75 @@ const getSingleTaskFromDB = async (id: string) => {
   // };
   return result;
 };
+
+// const updateTaskIntoDB = async (id: string, payload: Partial<TTask>) => {
+//   // Fetch the existing task to get its createdAt date
+//   const existingTask = await Task.findById(id);
+//   if (!existingTask) {
+//     throw new AppError(httpStatus.NOT_FOUND, "Task Not Found");
+//   }
+
+//   // If the payload contains a dueDate in days, calculate the new due date
+//   if (typeof payload.dueDate === "number") {
+//     // If dueDate exists in the existing task, sum it with the new value
+//     const existingDueDateInDays = existingTask.dueDate
+//       ? Math.floor(
+//         (new Date(existingTask.dueDate).getTime() -
+//           new Date(existingTask.createdAt).getTime()) /
+//         (1000 * 60 * 60 * 24)
+//       )
+//       : 0;
+
+//     // Sum the existing days with the new due date
+//     const newDueDateInDays = existingDueDateInDays + payload.dueDate;
+
+//     // Create a new Date object based on createdAt
+//     const createdAt = existingTask.createdAt; // existing createdAt date
+//     const newDueDate = new Date(createdAt);
+//     newDueDate.setUTCDate(newDueDate.getUTCDate() + newDueDateInDays); // Adding the total days in UTC
+
+//     // Update the payload with the new dueDate
+//     payload.dueDate = newDueDate.toISOString();
+//     console.log("Updated dueDate:", payload.dueDate);
+//   }
+
+//   // Update the task in the database
+//   const result = await Task.findByIdAndUpdate(id, payload, {
+//     new: true,
+//     runValidators: true,
+//     upsert: true,
+//   });
+// console.log(result)
+//   return result;
+// };
+
+
+
 const updateTaskIntoDB = async (id: string, payload: Partial<TTask>) => {
-  // Fetch the existing task to get its createdAt date
   const existingTask = await Task.findById(id);
   if (!existingTask) {
     throw new AppError(httpStatus.NOT_FOUND, "Task Not Found");
   }
 
-  // If the payload contains a dueDate in days, calculate the new due date
-  if (typeof payload.dueDate === "number") {
-    // If dueDate exists in the existing task, sum it with the new value
-    const existingDueDateInDays = existingTask.dueDate
-      ? Math.floor(
-        (new Date(existingTask.dueDate).getTime() -
-          new Date(existingTask.createdAt).getTime()) /
-        (1000 * 60 * 60 * 24)
-      )
-      : 0;
+  if (payload.dueDate) {
+    if (typeof payload.dueDate === "number") {
+      const existingDueDateInDays = existingTask.dueDate
+        ? Math.floor(
+            (moment(existingTask.dueDate).utc().valueOf() - moment(existingTask.createdAt).utc().valueOf()) /
+              (1000 * 60 * 60 * 24)
+          )
+        : 0;
 
-    // Sum the existing days with the new due date
-    const newDueDateInDays = existingDueDateInDays + payload.dueDate;
-
-    // Create a new Date object based on createdAt
-    const createdAt = existingTask.createdAt; // existing createdAt date
-    const newDueDate = new Date(createdAt);
-    newDueDate.setUTCDate(newDueDate.getUTCDate() + newDueDateInDays); // Adding the total days in UTC
-
-    // Update the payload with the new dueDate
-    payload.dueDate = newDueDate.toISOString();
+      const newDueDateInDays = existingDueDateInDays + payload.dueDate;
+      const createdAt = moment(existingTask.createdAt).utc();
+      const newDueDate = createdAt.add(newDueDateInDays, 'days');
+      payload.dueDate = newDueDate.toISOString();
+    } else if (typeof payload.dueDate === "string" || payload.dueDate instanceof Date) {
+      // Ensure dueDate is stored correctly if it's provided as a full date
+      payload.dueDate = moment(payload.dueDate).utc().toISOString();
+    }
   }
 
-  // Update the task in the database
   const result = await Task.findByIdAndUpdate(id, payload, {
     new: true,
     runValidators: true,
@@ -136,6 +174,10 @@ const updateTaskIntoDB = async (id: string, payload: Partial<TTask>) => {
 
   return result;
 };
+
+
+
+
 // get the message count for each group
   const getUnreadCount = async (data: any) => {
     const { _id, taskId } = data;
@@ -508,6 +550,8 @@ const getTodaysTaskByUser = async (userid: string) => {
     },
   };
 
+  // console.log("Query for today's tasks:", query);
+
   const data = await Task.find(query)
     .populate("author assigned company") // Adjust based on your schema
     .exec();
@@ -532,7 +576,7 @@ const getTodaysTaskByUser = async (userid: string) => {
          unreadMessageCount: unreadCount ? unreadCount.unreadMessageCount : 0,
        };
      });
-
+// console.log(result)
   return result;
 };
 
