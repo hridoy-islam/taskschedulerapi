@@ -258,15 +258,12 @@ const getSharedNoteByIdFromDB = async (userId: string, query: Record<string, unk
 
 const updateNoteIntoDB = async (noteId: string, payload: Partial<TNote>) => {
   try {
-    console.log(`Fetching note with ID: ${noteId}`);
     const note = await Note.findById(noteId);
     if (!note) throw new Error("Note not found");
 
-    console.log(`Fetching author with ID: ${note.author}`);
     const author = await User.findById(note.author);
     if (!author) throw new Error("Author not found");
 
-    console.log(`Updating note with ID: ${noteId}`);
     const result = await Note.findByIdAndUpdate(noteId, payload, {
       new: true,
       runValidators: true,
@@ -274,7 +271,6 @@ const updateNoteIntoDB = async (noteId: string, payload: Partial<TNote>) => {
     });
 
     if (!result) throw new Error("Note update failed");
-    console.log(`Note updated successfully: ${result.title}`);
 
     // Send notification ONLY when the note is shared, not when it's updated
     if (

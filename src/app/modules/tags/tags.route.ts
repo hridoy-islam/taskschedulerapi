@@ -16,7 +16,7 @@ router.get(
 );
 router.get(
   "/user/:id",
-  auth("admin", "director", "company", "creator", "user"),
+  // auth("admin", "director", "company", "creator", "user"),
   TagsControllers.getAllForUserTags
 );
 router.get(

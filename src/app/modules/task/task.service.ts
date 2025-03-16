@@ -161,8 +161,10 @@ const updateTaskIntoDB = async (id: string, payload: Partial<TTask>) => {
       const newDueDate = createdAt.add(newDueDateInDays, 'days');
       payload.dueDate = newDueDate.toISOString();
     } else if (typeof payload.dueDate === "string" || payload.dueDate instanceof Date) {
-      // Ensure dueDate is stored correctly if it's provided as a full date
-      payload.dueDate = moment(payload.dueDate).utc().toISOString();
+      // Parse the date as a local date first
+      const localDate = moment(payload.dueDate).local();
+      // Then convert it to UTC
+      payload.dueDate = localDate.utc().toISOString();
     }
   }
 
@@ -174,9 +176,6 @@ const updateTaskIntoDB = async (id: string, payload: Partial<TTask>) => {
 
   return result;
 };
-
-
-
 
 // get the message count for each group
   const getUnreadCount = async (data: any) => {
