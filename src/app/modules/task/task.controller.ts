@@ -157,6 +157,18 @@ const updateReadComment = catchAsync(async (req, res) => {
   });
 });
 
+
+const getAllTaskForUser = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  const result = await TaskServices.getAllTaskForUserFromDB(id as string, req.query);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Task is retrieved succesfully",
+    data: result,
+  });
+});
+
 export const TaskControllers = {
   getAllTask,
   getSingleTask,
@@ -171,4 +183,5 @@ export const TaskControllers = {
   getPlannerTasksByDay,
   getAssignedTask,
   updateReadComment,
+  getAllTaskForUser
 };

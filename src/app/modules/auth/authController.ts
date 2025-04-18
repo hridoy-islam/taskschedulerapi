@@ -11,31 +11,32 @@ const login = catchAsync(async (req, res) => {
   const result = await AuthServices.checkLogin(req.body);
   const { accessToken,refreshToken } = result;
 
-  // res.cookie('refreshToken', refreshToken, {
-  //   secure: config.NODE_ENV === 'production',
-  //   httpOnly: true,
-  // });
+  res.cookie('refreshToken', refreshToken, {
+    secure: config.NODE_ENV === 'production',
+    httpOnly: true,
+    sameSite: 'lax',
+  });
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
     message: "Logged In Successfully",
     data: {
-      accessToken,
-      refreshToken
+      accessToken
     },
   });
 });
 
 const refreshToken = catchAsync(async (req, res) => {
-  const { refreshToken } = req.body;
-
-  const result = await AuthServices.refreshToken(refreshToken);
-
+  const refreshToken = req.cookies.refreshToken
+  if (!refreshToken) {
+    throw new Error('Invalid token')
+  }
+  const result = await AuthServices.refreshToken(refreshToken)
 
   sendResponse(res, {
     statusCode: 200,
     success: true,
-    message: 'User logged in successfully !',
+    message: 'Token refreshed successfully',
     data: result,
 });
 });

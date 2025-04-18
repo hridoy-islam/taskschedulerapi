@@ -9,6 +9,7 @@ const notificationSchema = new Schema<TNotification>(
     type: { type: String, required: true }, // Notification title
     message: { type: String, required: true }, // Notification message
     isRead: { type: Boolean, default: false }, // Read/unread status
+    docId:{ type: String, default: "" }
   },
   {
     timestamps: true,

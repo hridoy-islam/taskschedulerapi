@@ -294,6 +294,7 @@ const updateNoteIntoDB = async (noteId: string, payload: Partial<TNote>) => {
           senderId: author._id,
           type: "note",
           message: `${author.name} shared a note: "${result.title}"`,
+          docId: result._id.toString()
         });
 
         if (notification) {

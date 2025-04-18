@@ -7,4 +7,5 @@ export interface TNotification {
   type: string;     // Type of notification (e.g., "task", "note")
   message: string;  // Notification message
   isRead?: boolean; // Optional read status, default is false
+  docId?: string; 
 }

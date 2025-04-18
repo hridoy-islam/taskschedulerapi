@@ -29,29 +29,31 @@ const checkLogin = async (payload: TLogin) => {
     if (!(await User.isPasswordMatched(payload?.password, foundUser?.password)))
       throw new AppError(httpStatus.FORBIDDEN, "Password do not matched");
 
-    const accessToken = jwt.sign(
-      {
-        _id: foundUser._id?.toString(),
-        email: foundUser?.email,
-        name: foundUser?.name,
-        role: foundUser?.role,
-      },
+
+    const jwtPayload: JwtPayload = {
+      _id: foundUser._id?.toString(),
+      email: foundUser?.email,
+      name: foundUser?.name,
+      role: foundUser?.role,
+    }
+ 
+    
+
+    const accessToken = jwtHelpers.createToken(
+      jwtPayload,
+      
       `${config.jwt_access_secret}`,
       {
-        expiresIn: "2 days",
+        expiresIn: "4d",
       }
     );
 
-    const refreshToken = jwt.sign(
-      {
-        _id: foundUser._id?.toString(),
-        email: foundUser?.email,
-        name: foundUser?.name,
-        role: foundUser?.role,
-      },
+    const refreshToken = jwtHelpers.createToken(
+      jwtPayload,
+      
       `${config.jwt_refresh_secret}`,
        {
-        expiresIn: "4 days", // Refresh Token expires in 7 days
+        expiresIn: "7d", 
       }
     );
     await User.updateOne({ _id: foundUser._id }, { refreshToken });
@@ -82,34 +84,29 @@ const refreshToken = async (token: string) => {
   }
 
   try {
-    // ✅ Fix: Await `jwt.verify()` to properly handle async
-    const decoded = jwt.verify(token,  `${config.jwt_refresh_secret}`,);
+    const decoded = jwtHelpers.verifyToken(token,  `${config.jwt_refresh_secret}`,);
+
+    const jwtPayload: JwtPayload = {
+      _id: foundUser._id.toString(),
+      email: foundUser.email,
+      name: foundUser.name,
+      role: foundUser.role,
+    }
 
     // Generate new access token
-    const newAccessToken = jwt.sign(
-      {
-        _id: foundUser._id.toString(),
-        email: foundUser.email,
-        name: foundUser.name,
-        role: foundUser.role,
-      },
+    const newAccessToken = jwtHelpers.createToken(
+      jwtPayload,
       `${config.jwt_access_secret}`,
-      { expiresIn: "2 days" }
+      { expiresIn: "4d" }
     );
 
     // Generate new refresh token (optional rotation)
-    const newRefreshToken = jwt.sign(
-      {
-        _id: foundUser._id.toString(),
-        email: foundUser.email,
-        name: foundUser.name,
-        role: foundUser.role,
-      },
+    const newRefreshToken = jwtHelpers.createToken(
+      jwtPayload,
       `${config.jwt_refresh_secret}`,
-      { expiresIn: "4 days" }
+      { expiresIn: "7d" }
     );
 
-    // 🔥 Update refresh token in the database
     foundUser.refreshToken = newRefreshToken;
     await foundUser.save();
 
@@ -121,9 +118,6 @@ const refreshToken = async (token: string) => {
     throw new AppError(httpStatus.BAD_REQUEST, "Invalid Refresh Token");
   }
 };
-
-
-
 
 const googleLogin = async (payload: {
   email: string;
@@ -146,7 +140,7 @@ const googleLogin = async (payload: {
         googleUid: payload.googleUid,
         image: payload.image,
         phone: payload.phone,
-        role: "company", // Default role for new users
+        role: "company", 
       });
 
       // Generate JWT for the new user
@@ -159,7 +153,7 @@ const googleLogin = async (payload: {
         },
         `${config.jwt_access_secret}`,
         {
-          expiresIn: "2 days",
+          expiresIn: "4d",
         }
       );
 
@@ -186,7 +180,7 @@ const googleLogin = async (payload: {
       },
       `${config.jwt_access_secret}`,
       {
-        expiresIn: "2 days",
+        expiresIn: "7d",
       }
     );
 

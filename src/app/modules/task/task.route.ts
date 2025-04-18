@@ -9,6 +9,13 @@ router.get(
   auth("admin", "director", "company", "creator", "user"),
   TaskControllers.getAllTask
 );
+router.get(
+  "/alltasks/:id",
+  auth("admin", "director", "company", "creator", "user"),
+  TaskControllers.getAllTaskForUser
+);
+
+
 router.post(
   "/",
   auth("admin", "director", "company", "creator", "user"),
@@ -19,6 +26,11 @@ router.patch(
   "/:id",
   auth("admin", "director", "user", "company", "creator"),
   TaskControllers.updateTask
+);
+router.get(
+  "/:id",
+  auth("admin", "director", "user", "company", "creator"),
+  TaskControllers.getSingleTask
 );
 
 router.get(

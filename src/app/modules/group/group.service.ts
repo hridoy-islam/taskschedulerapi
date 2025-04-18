@@ -56,6 +56,7 @@ const createGroupIntoDB = async (payload: TGroup, requester : any) => {
           senderId: author._id, // User creating the group
           type: "group",
           message: notificationMessage,
+          docId: result._id.toString()
         });
       }
     })

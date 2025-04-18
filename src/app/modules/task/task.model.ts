@@ -63,6 +63,10 @@ const taskSchema = new Schema<TTask>(
       type: Boolean,
       default: false,
     },
+    seen:{
+      type: Boolean,
+      default: false
+    }
   },
   {
     timestamps: true,
