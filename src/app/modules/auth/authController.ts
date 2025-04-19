@@ -15,6 +15,7 @@ const login = catchAsync(async (req, res) => {
     secure: config.NODE_ENV === 'production',
     httpOnly: true,
     sameSite: 'lax',
+    
   });
   sendResponse(res, {
     statusCode: httpStatus.OK,

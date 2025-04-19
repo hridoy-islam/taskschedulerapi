@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-this-alias */
 import { Schema, model } from "mongoose";
-import {  TLastSeen, TTask } from "./task.interface";
+import { TLastSeen, TTask } from "./task.interface";
 
 const lastSeenSchema = new Schema<TLastSeen>(
   {
@@ -20,7 +20,6 @@ const lastSeenSchema = new Schema<TLastSeen>(
     timestamps: true,
   }
 );
-
 
 const taskSchema = new Schema<TTask>(
   {
@@ -63,10 +62,11 @@ const taskSchema = new Schema<TTask>(
       type: Boolean,
       default: false,
     },
-    seen:{
+    seen: {
       type: Boolean,
-      default: false
-    }
+      default: false,
+    },
+    importantBy: [{ type: Schema.Types.ObjectId, ref: "User",default: []  }],
   },
   {
     timestamps: true,

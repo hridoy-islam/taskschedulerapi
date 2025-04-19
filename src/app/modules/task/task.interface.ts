@@ -24,6 +24,7 @@ export interface TTask {
   createdAt: Date;
   updatedAt: Date; 
   seen: boolean;
+  importantBy: Types.ObjectId[]
 }
 
 // export interface TaskModel extends Model<TTask> {

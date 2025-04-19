@@ -11,7 +11,7 @@ router.post(
   AuthControllers.login
 );
 router.post(
-  '/refreshtoken',
+  '/refreshToken',
   validateRequest(AuthValidations.refreshTokenZodSchema),
   AuthControllers.refreshToken
 );

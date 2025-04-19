@@ -34,45 +34,41 @@ const googleValidationSchema = z.object({
   }),
 });
 
-
 const validateOtpSchema = z.object({
   body: z.object({
-    email: z.string().email('Invalid email address'),
-    otp: z.string().length(4, 'OTP must be exactly 4 digits'),
+    email: z.string().email("Invalid email address"),
+    otp: z.string().length(4, "OTP must be exactly 4 digits"),
   }),
 });
 
 const verifyEmailAccount = z.object({
   body: z.object({
-    email: z.string().email('Invalid email address'),
-    otp: z.string().length(4, 'OTP must be exactly 4 digits'),
+    email: z.string().email("Invalid email address"),
+    otp: z.string().length(4, "OTP must be exactly 4 digits"),
   }),
 });
 
 const resetPasswordSchema = z.object({
   body: z.object({
-    email: z.string().email('Invalid Email Address'),
-    newPassword: z.string({ required_error: "Password is Required" })
-  })
-})
+    email: z.string().email("Invalid Email Address"),
+    newPassword: z.string({ required_error: "Password is Required" }),
+  }),
+});
 
 const emailSentOtpSchema = z.object({
   body: z.object({
-    email: z.string().email('Invalid Email Address'),
-  })
-})
-
-
-  const refreshTokenZodSchema = z.object({
-    body: z.object({
-      refreshToken: z.string({
-        required_error: 'Refresh Token is required',
+    email: z.string().email("Invalid Email Address"),
   }),
- }),
-  });
+});
 
 
-
+const refreshTokenZodSchema = z.object({
+  cookies: z.object({
+    refreshToken: z.string({
+      required_error: 'Refresh Token is required',
+    }),
+  }),
+});
 
 export const AuthValidations = {
   loginValidationSchema,
@@ -83,5 +79,5 @@ export const AuthValidations = {
   verifyEmailAccount,
   resetPasswordSchema,
   emailSentOtpSchema,
-  refreshTokenZodSchema
+  refreshTokenZodSchema,
 };
