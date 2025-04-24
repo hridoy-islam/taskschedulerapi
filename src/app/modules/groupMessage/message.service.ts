@@ -4,33 +4,44 @@ import { Group } from "../group/group.model";
 import { User } from "../user/user.model";
 import { TGroupMessage } from "./message.interface";
 import { GroupMessage } from "./message.model";
-import mongoose from "mongoose";
+import mongoose, { Types } from "mongoose";
 
-const createMessageIntoDB = async (payload: TGroupMessage, requester: any) => {
+interface IRequester {
+  _id: string;
+  
+}
+
+const createMessageIntoDB = async (payload: TGroupMessage, requester: IRequester) => {
   const { taskId, authorId, isFile } = payload;
-  const isMember = await Group.findOne({
-    _id: taskId,
-    "members._id": requester._id,
-  });
+
+  // Ensure both IDs are ObjectId instances
+  const taskObjectId = taskId;
+  const requesterObjectId =requester._id;
+
+  const task = await Group.findById(taskObjectId);
+
+  if (!task) {
+    throw new AppError(httpStatus.NOT_FOUND, "Group not found");
+  }
+
+  const isMember = task.members.some(
+    (member) => member._id.toString() === requesterObjectId.toString()
+  );
 
   if (!isMember) {
-    throw new AppError(
-      httpStatus.FORBIDDEN,
-      "You are not a member of the group"
-    );
+    throw new AppError(httpStatus.FORBIDDEN, "You are not a member of the group");
   }
 
-  const task = await Group.findById(taskId);
-  const author = await User.findById(authorId);
-  if (!task || !author) {
-    return null;
-  }
-
-  if (task.status === 'archived') {
+  if (task.status === "archived") {
     throw new AppError(
       httpStatus.FORBIDDEN,
       "This group is archived and cannot accept new messages."
     );
+  }
+
+  const author = await User.findById(authorId);
+  if (!author) {
+    throw new AppError(httpStatus.NOT_FOUND, "Author not found");
   }
 
   const data = await GroupMessage.create(payload);
@@ -39,14 +50,14 @@ const createMessageIntoDB = async (payload: TGroupMessage, requester: any) => {
     (member) => member._id.toString() !== authorId.toString()
   );
 
-  const result = {
+  return {
     ...data.toObject(),
     otherUserArr,
     authorName: author.name,
     taskName: task.groupName,
   };
-  return result;
 };
+
 
 const getMessagesFromDB = async (id: string, page: number, limit: number, requester: any) => {
 
@@ -90,11 +101,58 @@ const getMessagesFromDB = async (id: string, page: number, limit: number, reques
 
 
 
+const updateMessageFromDB = async (
+  messageId: string,
+  updatedContent: { content?: string; isFile?: boolean },
+  requester: any
+) => {
+  // Find the message by ID
+  const message = await GroupMessage.findById(messageId);
+  if (!message) {
+    throw new AppError(httpStatus.NOT_FOUND, "Message not found");
+  }
+console.log(message.authorId)
+if (!message.authorId.equals(requester)) {
+  throw new AppError(
+    httpStatus.FORBIDDEN,
+    "You are not authorized to update this message"
+  );
+}
+
+
+  const group = await Group.findById(message.taskId);
+  if (!group) {
+    throw new AppError(httpStatus.NOT_FOUND, "Group not found");
+  }
+
+  if (group.status === "archived") {
+    throw new AppError(
+      httpStatus.FORBIDDEN,
+      "This group is archived and messages cannot be edited"
+    );
+  }
+
+  // Update the content and/or isFile fields
+  if (updatedContent.content !== undefined) {
+    message.content = updatedContent.content;
+  }
+
+  if (updatedContent.isFile !== undefined) {
+    message.isFile = updatedContent.isFile;
+  }
+
+  await message.save();
+  return message;
+};
+
+
+
 
 
 
 
 export const CommentServices = {
   createMessageIntoDB,
-  getMessagesFromDB
+  getMessagesFromDB,
+  updateMessageFromDB
 };

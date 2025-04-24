@@ -6,7 +6,7 @@ const GroupMessageSchema = new Schema<TGroupMessage>(
     taskId: {
       type: Schema.Types.ObjectId,
       required: true,
-      ref: "task",
+      ref: "Group",
     },
     content: {
       type: String,

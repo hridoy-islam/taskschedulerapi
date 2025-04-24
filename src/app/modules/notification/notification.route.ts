@@ -11,11 +11,19 @@ router.post(
   NotificationControllers.createNotification
 );
 
-
 // Route to fetch notifications for a user
 router.get("/:userId", NotificationControllers.getNotifications);
 
 // Route to mark a notification as read
-router.patch("/:notificationId/read", NotificationControllers.markAsRead);
+router.patch(
+  "/:notificationId/read",
+  auth("admin", "director", "company", "creator", "user"),
+  NotificationControllers.markAsRead
+);
+router.patch(
+  "/readall",
+  auth("admin", "director", "company", "creator", "user"),
+  NotificationControllers.markAllAsRead
+);
 
 export const NotificationsRoutes = router;

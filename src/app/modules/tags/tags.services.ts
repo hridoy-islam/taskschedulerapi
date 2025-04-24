@@ -2,6 +2,7 @@ import QueryBuilder from "../../builder/QueryBuilder";
 import { Tag } from "./tags.model";
 import { TTags } from "./tags.interface";
 import { TagsSearchableFields } from "./tags.constant";
+import mongoose from "mongoose";
 
 const createTagsIntoDB = async (payload: TTags) => {
   const result = await Tag.create(payload);
@@ -25,20 +26,31 @@ const getAllTagsFromDB = async (query: Record<string, unknown>) => {
   };
 };
 
-const getAllTagsForUserFromDB = async (userId:string,query: Record<string, unknown>) => {
-  const noteQuery = new QueryBuilder(Tag.find({ author: userId }).populate("author"), query)
+const getAllTagsForUserFromDB = async (userId: string, query: Record<string, unknown>) => {
+  // First validate userId is a valid ObjectId
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    throw new Error('Invalid user ID');
+  }
+
+  const tagQuery = new QueryBuilder(
+    Tag.find({ author: userId }).populate({
+      path: 'author',
+      select: 'name email' // Only select necessary fields
+    }),
+    query
+  )
     .search(TagsSearchableFields)
     .filter()
     .sort()
     .paginate()
     .fields();
 
-  const meta = await noteQuery.countTotal();
-  const result = await noteQuery.modelQuery;
+  const meta = await tagQuery.countTotal();
+  const result = await tagQuery.modelQuery;
 
   return {
     meta,
-    result: result.filter(tag => tag.author._id.toString() === userId),
+    result // Removed the additional filter since we're already querying by author
   };
 };
 

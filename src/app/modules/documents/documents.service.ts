@@ -5,6 +5,7 @@ import AppError from "../../errors/AppError";
 
 import { User } from "../user/user.model";
 import { GroupMessage } from "../groupMessage/message.model";
+import { Group } from "../group/group.model";
 
 
 
@@ -62,12 +63,19 @@ const UploadDocumentToGCS = async (file: any, payload: any) => {
       return { entityId, file_type, fileUrl };
     }
      else if(file_type === "groupDoc"){
-      const groupMessage = await GroupMessage.findById(entityId);
-      if (!groupMessage) throw new AppError(httpStatus.NOT_FOUND, "Invoice not found");
+      
+      return { entityId, file_type, fileUrl };
+    }
+     else if(file_type === "taskDoc"){
+      
+      return { entityId, file_type, fileUrl };
+    }
+     else if(file_type === "groupImg"){
+      const group = await Group.findById(entityId);
+      if (!group) throw new AppError(httpStatus.NOT_FOUND, "Group not found");
 
-      groupMessage.content = fileUrl; 
-      await groupMessage.save();
-
+      group.image = fileUrl; 
+      await group.save();
 
       return { entityId, file_type, fileUrl };
     }

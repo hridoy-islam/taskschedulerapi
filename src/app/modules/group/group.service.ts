@@ -225,6 +225,7 @@ const getSingleGroupFromDB = async (id: string, requester: any) => {
     createdAt: groupData.createdAt,
     updatedAt: groupData.updatedAt,
     messageCount,
+    image: groupData.image
     
   };
 };

@@ -5,6 +5,8 @@ import { TComment } from "./comment.interface";
 import { Comment } from "./comment.model";
 import { getIO } from "../../../socket";
 import { Types } from "mongoose";
+import AppError from "../../errors/AppError";
+import httpStatus from "http-status";
 
 const createCommentIntoDB = async (payload: TComment) => {
 
@@ -21,27 +23,13 @@ const createCommentIntoDB = async (payload: TComment) => {
     seenBy: [authorId], 
   };
   const data = await Comment.create(commentPayload);
-  // if (data) {
-  //   const taskId = data?.taskId.toString();
-  //   const userId = data?.authorId.toString();
-  //   const messageId = data?._id.toString();
-  //   try {
-  //     const task = await TaskServices.updateReadComment(
-  //       taskId,
-  //       userId,
-  //       messageId
-  //     );
-  //   } catch (error) {
-  //     console.error(error);
-  //   }
-  // }
+  
   const users = {
     creator: task?.author,
     assigned: task?.assigned,
     authorId
   };
-  // check other-User against authorId
-  // const otherUser = users.creator.toString() === authorId.toString() ? users.assigned : users.creator;
+ 
   const otherUser = users.creator.toString() === authorId.toString() ? users.assigned : users.creator;
 
 
@@ -61,17 +49,6 @@ const getCommentsFromDB = async (id: string, user: any) => {
     path: 'authorId', // Populate the author's ID for the comment
     select: '_id name' // Select only the ID and name for the author of the comment
   });
-  // if (result) {
-  //   const taskId = id;
-  //   const userId = result[0]?.authorId?._id.toString();
-  //   const messageId = result[result.length - 1]._id.toString();
-  // try {
-  //   const task = await TaskServices.updateReadComment(taskId, userId, messageId)
-  //   console.log(task);
-  // } catch (error) {
-  //   console.error(error);
-  // }
-  // }
 
 
   await Comment.updateMany(
@@ -81,10 +58,43 @@ const getCommentsFromDB = async (id: string, user: any) => {
   return result;
 }
 
+export const updateCommentFromDB = async (
+  messageId: string,
+  updatedContent: { content?: string; isFile?: boolean },
+  requester: Types.ObjectId | string
+): Promise<TComment> => {
+  // Find the message by ID
+  const message = await Comment.findById(messageId);
+  if (!message) {
+    throw new AppError(httpStatus.NOT_FOUND, "Message not found");
+  }
 
+  // Authorization check
+  if (!message.authorId.equals(new Types.ObjectId(requester))) {
+    throw new AppError(
+      httpStatus.FORBIDDEN,
+      "You are not authorized to update this message"
+    );
+  }
+
+  
+
+  // Update fields
+  if (updatedContent.content !== undefined) {
+    message.content = updatedContent.content;
+  }
+
+  if (updatedContent.isFile !== undefined) {
+    message.isFile = updatedContent.isFile;
+  }
+
+  await message.save();
+  return message;
+};
 
 
 export const CommentServices = {
   createCommentIntoDB,
-  getCommentsFromDB
+  getCommentsFromDB,
+  updateCommentFromDB
 };

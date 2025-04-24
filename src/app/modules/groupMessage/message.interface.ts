@@ -1,12 +1,11 @@
 /* eslint-disable no-unused-vars */
-import { Model, Types } from "mongoose";
+import mongoose, { Model, Types } from "mongoose";
 
 export interface TGroupMessage {
-  _id: Types.ObjectId;
-    taskId: Types.ObjectId; // Reference to the task
-    authorId: Types.ObjectId; // Reference to the author
-    isFile: boolean; // Is the comment a file
-    content: string; // The comment content
-    seenBy: Types.ObjectId[]; 
+  content: string;
+  taskId: mongoose.Types.ObjectId;
+  authorId: mongoose.Types.ObjectId;
+  isFile?: boolean;
+  seenBy?: mongoose.Types.ObjectId[];
 
 }

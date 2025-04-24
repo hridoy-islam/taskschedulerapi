@@ -49,7 +49,7 @@ router.post('/reset', validateRequest(AuthValidations.resetPasswordSchema), Auth
 
 router.post('/emailotp', validateRequest(AuthValidations.emailSentOtpSchema), AuthControllers.emailVerifySendOtp);
 
-router.post(
+router.patch(
   "/verifyemail",
   validateRequest(AuthValidations.verifyEmailAccount),
   AuthControllers.verifyEmail

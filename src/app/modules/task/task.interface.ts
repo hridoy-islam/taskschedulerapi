@@ -18,7 +18,7 @@ export interface TTask {
   company?: Types.ObjectId | null;
   status: "pending" | "completed";
   isDeleted?: boolean;
-  important?: boolean;
+  // important?: boolean;
   dueDate?: Date | string;
   lastSeen?: TLastSeen[];
   createdAt: Date;

@@ -13,5 +13,10 @@ router.get(
   auth("admin", "user", "director", "company", "creator"),
   CommentControllers.getComments
 );
+router.patch(
+  "/:id",
+  auth("admin", "user", "director", "company", "creator"),
+  CommentControllers.updateComment
+);
 
 export const CommentRoutes = router;

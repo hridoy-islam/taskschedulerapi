@@ -68,6 +68,7 @@ const userSchema = new Schema<TUser, UserModel>(
       type: String,
       select:false
     },
+    otpExpires: { type: Date, required: false },
   },
   {
     timestamps: true,

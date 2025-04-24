@@ -12,6 +12,13 @@ import { Secret } from "jsonwebtoken";
 import config from "../../config";
 import catchAsync from "../../utils/catchAsync";
 import sendResponse from "../../utils/sendResponse";
+import moment from "moment";
+
+
+function generateOTP() {
+  const otp = Math.floor(1000 + Math.random() * 9000).toString();
+  return otp;
+}
 
 const checkLogin = async (payload: TLogin) => {
   try {
@@ -34,6 +41,7 @@ const checkLogin = async (payload: TLogin) => {
       email: foundUser?.email,
       name: foundUser?.name,
       role: foundUser?.role,
+      authorized: foundUser?.authorized
     };
 
     const accessToken = createToken(
@@ -178,7 +186,29 @@ const createUserIntoDB = async (payload: TCreateUser) => {
   if (user) {
     throw new AppError(httpStatus.NOT_FOUND, "This user is already exits!");
   }
-  const result = await User.create(payload);
+
+
+  const otp = generateOTP();
+  const newUserPayload = {
+    ...payload,
+    otp,
+  };
+
+  const result = await User.create(newUserPayload);
+
+  try {
+    // await sendEmail(
+    //   payload.email,             
+    //   'welcome_template',                 
+    //   'Welcome to Task Planner', 
+    //   payload.name               
+    // );
+
+    await sendEmail(payload.email, 'welcome_template', "Welcome to Task Planner", payload.name);
+  } catch (error) {
+    console.error('Error sending welcome email:', error);
+  }
+
   return result;
 };
 
@@ -193,17 +223,55 @@ const EmailSendOTP = async (email: string) => {
   // send email
 };
 
-const verifyEmailIntoDB = async (email: string, otp: string) => {
-  const foundUser = await User.isUserExists(email.toLowerCase());
+
+
+
+export const verifyEmailIntoDB = async (email: string, otp: string) => {
+  const foundUser = await User.findOne({ email: email.toLowerCase() });
+
   if (!foundUser) {
-    throw new AppError(httpStatus.NOT_FOUND, "Email is not correct");
+    throw new AppError(httpStatus.NOT_FOUND, 'Email is not correct');
   }
 
-  // Check if the OTP matches
+  // Check OTP
   if (foundUser.otp !== otp) {
-    throw new AppError(httpStatus.BAD_REQUEST, "Invalid OTP!");
+    throw new AppError(httpStatus.BAD_REQUEST, 'Invalid OTP!');
   }
-  await User.updateOne({ email }, { authorized: true });
+
+  // Check OTP expiry using moment
+  if (foundUser.otpExpires && moment().isAfter(moment(foundUser.otpExpires))) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'OTP has expired');
+  }
+
+  // Update user: mark as authorized and clear OTP
+  await User.updateOne(
+    { email: email.toLowerCase() },
+    { authorized: true, otp: '', otpExpires: null }
+  );
+
+  const jwtPayload = {
+    _id: foundUser._id?.toString(),
+    email: foundUser.email,
+    name: foundUser.name,
+    role: foundUser.role,
+  };
+
+  const accessToken = createToken(
+    jwtPayload,
+    config.jwt_access_secret as string,
+    config.jwt_access_expires_in as string
+  );
+
+  const refreshToken = createToken(
+    jwtPayload,
+    config.jwt_refresh_secret as string,
+    config.jwt_refresh_expires_in as string
+  );
+
+  return {
+    accessToken,
+    refreshToken
+  };
 };
 
 // const forgetPassword = async (email: string) => {
@@ -224,6 +292,7 @@ const verifyEmailIntoDB = async (email: string, otp: string) => {
 //   sendEmail(user.email, resetUILink);
 // };
 
+
 const forgetPasswordOtp = async (email: string) => {
   const user = await User.isUserExists(email);
   if (!user) {
@@ -235,31 +304,25 @@ const resetPassword = async (
   payload: { email: string; newPassword: string },
   token: string
 ) => {
-  const user = await User.isUserExists(payload?.email);
+  const user = await User.findOne({ email: payload.email }).select('+password');
   if (!user) {
     throw new AppError(httpStatus.NOT_FOUND, "This user is not found !");
   }
-
+  
   const decoded = jwt.verify(
     token,
     config.jwt_access_secret as string
   ) as JwtPayload;
-
+  
   if (payload.email !== decoded.email) {
     throw new AppError(httpStatus.FORBIDDEN, "You are forbidden!");
   }
+  
+  user.password = payload.newPassword;
+  await user.save(); 
+  
 
-  const newHashedPassword = await bcrypt.hash(
-    payload.newPassword,
-    Number(config.bcrypt_salt_rounds)
-  );
-
-  await User.findOneAndUpdate(
-    { email: decoded.email, role: decoded.role },
-    {
-      password: newHashedPassword,
-    }
-  );
+  return user;
 };
 
 export const AuthServices = {

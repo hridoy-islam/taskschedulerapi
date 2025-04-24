@@ -24,6 +24,7 @@ const membersSchema = new Schema<TGroupMember>({
     default: null,
   },
 });
+
 const groupSchema = new Schema<TGroup>(
   {
     
@@ -55,6 +56,10 @@ const groupSchema = new Schema<TGroup>(
     //   type: Boolean,
     //   default: false,
     // }
+    image: {
+      type: String,
+      default: '',
+    },
   },
   {
     timestamps: true,

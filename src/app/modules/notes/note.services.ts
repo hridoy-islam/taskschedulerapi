@@ -78,32 +78,45 @@ const getAllNoteFromDB = async (query: Record<string, unknown>) => {
 
 const getNoteByUserIdFromDB = async (authorId: string, query: Record<string, unknown>) => {
   try {
-    // Build query to search notes by author ID and populate 'author' and 'tags'
-    const noteQuery = new QueryBuilder(Note.find({ author: authorId }).populate("author").populate("tags"),query)
-      .search(NoteSearchableFields)  // Apply search logic based on NoteSearchableFields
-      .filter()                     // Apply filter conditions
-      .sort()                        // Apply sorting
-      .paginate()                    // Apply pagination
-      .fields();                     // Select specific fields if needed
+    // Use $or to include both owned notes and shared notes
+    const noteQuery = new QueryBuilder(
+      Note.find({
+        $or: [
+          { author: authorId },
+          { sharedWith: authorId }
+        ]
+      }).populate("author").populate("tags"),
+      query
+    )
+      .search(NoteSearchableFields)
+      .filter()
+      .sort()
+      .paginate()
+      .fields();
 
-    // Count total documents based on the query
-    const meta = await Note.countDocuments({ author: authorId });  // Get total count of notes for the author
+    // Count total matching notes
+    const meta = await Note.countDocuments({
+      $or: [
+        { author: authorId },
+        { sharedWith: authorId }
+      ]
+    });
 
-    // Execute the query to get the actual results
-    const result = await noteQuery.modelQuery.exec(); // Execute query and return the result
+    const result = await noteQuery.modelQuery.exec();
 
     return {
-      meta,  // Total number of notes for the author
-      result, // Fetched notes with author and tags populated
+      meta,
+      result,
     };
   } catch (error) {
-    console.error("Error fetching notes by author:", error);
+    console.error("Error fetching notes by author or shared:", error);
     return {
       meta: 0,
-      result: [],  // Return empty result in case of error
+      result: [],
     };
   }
 };
+
 
 
 const getNoteByIdFromDB= async (noteId: string, query: Record<string, unknown>) => {

@@ -27,8 +27,25 @@ const getComments = catchAsync(async (req, res) => {
 });
 
 
+const updateComment: RequestHandler = catchAsync(async (req, res) => {
+  const { id } = req.params; 
+  const updatedContent = req.body; 
+  const requester = req.user._id; 
+
+  const result = await CommentServices.updateCommentFromDB(id, updatedContent, requester);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Comment updated successfully",
+    data: result,
+  });
+});
+
+
 
 export const CommentControllers = {
   createComment,
-  getComments
+  getComments,
+  updateComment
 };

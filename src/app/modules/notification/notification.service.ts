@@ -38,9 +38,25 @@ const findNotification = async ({ userId, noteId }: { userId: string; noteId: st
     throw new Error("Error checking for existing notification");
   }
 };
+const markAllAsSeen = async ({ userId }: { userId: string }) => {
+  try {
+    const result = await Notification.updateMany(
+      { 
+        userId, 
+        isRead: false 
+      },
+      { 
+        $set: { isRead: true } 
+      }
+    );
+    
+    return result;
+  } catch (error) {
+    throw new Error(`Failed to mark all notifications as read: ${error instanceof Error ? error.message : String(error)}`);
+  }
+};
 
 
-  // Mark a notification as read
 export const markAsReadIntoDB = async (notificationId: string) => {
     const result = await Notification.findByIdAndUpdate(notificationId, { isRead: true });
     return result;
@@ -50,5 +66,6 @@ export const NotificationService = {
     createNotificationIntoDB,
     getNotificationsFromDB,
     markAsReadIntoDB,
-    findNotification
+    findNotification,
+    markAllAsSeen 
 };

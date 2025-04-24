@@ -13,5 +13,10 @@ router.get(
   auth("admin", "user", "director", "company", "creator"),
   CommentControllers.getMessages
 );
+router.patch(
+  "/:id",
+  auth("admin", "user", "director", "company", "creator"),
+  CommentControllers.updateMessage
+);
 
 export const GroupMessageRoutes = router;

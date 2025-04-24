@@ -18,7 +18,8 @@ export interface TUser {
   phone?: string;
   googleUid?: string;
   otp?:string;
-  refreshToken?:string
+  refreshToken?:string;
+  otpExpires: Date | null; 
 }
 
 export interface UserModel extends Model<TUser> {
