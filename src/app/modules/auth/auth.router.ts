@@ -33,19 +33,18 @@ router.post(
 //   validateRequest(AuthValidations.createUserValidationSchema),
 //   AuthControllers.createUser,
 // );
-router.post(
+router.patch(
   "/forget",
-  validateRequest(AuthValidations.forgetPasswordValidationSchema),
+  // validateRequest(AuthValidations.forgetPasswordValidationSchema),
   AuthControllers.forgetPassword
 );
 
-router.post(
+router.patch(
   "/validate",
-  validateRequest(AuthValidations.validateOtpSchema),
   AuthControllers.validateReset
 );
 
-router.post('/reset', validateRequest(AuthValidations.resetPasswordSchema), AuthControllers.resetPassword)
+router.patch('/reset', AuthControllers.resetPassword)
 
 router.post('/emailotp', validateRequest(AuthValidations.emailSentOtpSchema), AuthControllers.emailVerifySendOtp);
 
@@ -53,6 +52,20 @@ router.patch(
   "/verifyemail",
   validateRequest(AuthValidations.verifyEmailAccount),
   AuthControllers.verifyEmail
+);
+
+router.patch(
+  "/resend-otp",
+  AuthControllers.emailVerifySendOtp
+);
+router.patch(
+  "/:id/change-password",
+
+  AuthControllers.ChangePassword
+);
+router.patch(
+  "/users/:id",
+  AuthControllers.PersonalInformation
 );
 
 

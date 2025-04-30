@@ -2,6 +2,37 @@
 import { Model, Types } from "mongoose";
 import { USER_ROLE } from "./user.constant";
 
+export interface BrowserInfo {
+  name?: string;
+  version?: string;
+}
+
+export interface OSInfo {
+  name?: string;
+  version?: string;
+}
+
+export interface DeviceInfo {
+  model?: string;
+  type?: string;
+  vendor?: string;
+}
+
+export interface CPUInfo {
+  architecture?: string;
+}
+
+export interface UserAgentInfo {
+  browser?: BrowserInfo;
+  os?: OSInfo;
+  device?: DeviceInfo;
+  cpu?: CPUInfo;
+  ipAddress: string;
+  macAddress: string;
+  timestamp?: Date;
+}
+
+
 export interface TUser {
   _id: Types.ObjectId;
   name: string;
@@ -10,16 +41,29 @@ export interface TUser {
   role: "user" | "admin" | "company" | "creator" | "director";
   status: "block" | "active";
   company?: Types.ObjectId;
-  colleagues?: Types.ObjectId[];
+  colleagues?: Types.ObjectId[]; 
   isDeleted: boolean;
   authorized: boolean;
+  
   address?: string;
-  image?: string;
+  image?: string; 
   phone?: string;
+  jobTitle?: string;
+  bio?: string;     
+  socialLinks?: string[];
+  companyType?: string;
+  companyWebsite?: string;
+  heardAboutUs?: string;
+  industryType?: string;
+  numberOfEmployees?: string;
   googleUid?: string;
-  otp?:string;
-  refreshToken?:string;
-  otpExpires: Date | null; 
+  otp?: string;
+  refreshToken?: string;
+  otpExpiry: Date;
+  isUsed: boolean;
+  companyEmail: string;
+  isValided: boolean;
+  userAgentInfo: UserAgentInfo[];
 }
 
 export interface UserModel extends Model<TUser> {

@@ -8,7 +8,7 @@ import config from "../../config";
 
 
 const login = catchAsync(async (req, res) => {
-  const result = await AuthServices.checkLogin(req.body);
+  const result = await AuthServices.checkLogin(req.body,req);
   const { accessToken,refreshToken } = result;
 
   res.cookie('refreshToken', refreshToken, {
@@ -74,7 +74,7 @@ const createUser = catchAsync(async (req, res) => {
 
 const forgetPassword = catchAsync(async (req, res) => {
   const email = req.body.email;
-  const result = await PasswordResetServices.requestOtp(email);
+  const result = await AuthServices.requestOtp(email);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
@@ -86,7 +86,7 @@ const forgetPassword = catchAsync(async (req, res) => {
 const validateReset = catchAsync(async (req, res) => {
   const email = req.body.email;
   const otp = req.body.otp;
-  const result = await PasswordResetServices.validateOtp(email, otp);
+  const result = await AuthServices.validateOtp(email, otp);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
@@ -96,8 +96,8 @@ const validateReset = catchAsync(async (req, res) => {
 });
 
 const resetPassword = catchAsync(async (req, res) => {
-  const token = req.headers.authorization;
-  const result = await AuthServices.resetPassword(req.body, token as string);
+  // const token = req.headers.authorization;
+  const result = await AuthServices.resetPassword(req.body);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
@@ -128,6 +128,33 @@ const emailVerifySendOtp = catchAsync(async (req, res) => {
     data: result,
   });
 });
+const PersonalInformation = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  const result = await AuthServices.personalInformationIntoDB(id, req.body);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "User is updated succesfully",
+    data: result,
+  });
+});
+
+const ChangePassword = catchAsync(async (req, res)  => {
+ 
+    // Extract data from request
+    const { currentPassword, newPassword } = req.body;
+    const {id} = req.params;
+    const result = await AuthServices.ChangePassword(id, currentPassword, newPassword);
+    // Send success response
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: "Password changed succesfully",
+      data: result,
+    });
+  
+    
+});
 
 
 
@@ -140,5 +167,7 @@ export const AuthControllers = {
   validateReset,
   verifyEmail,
   emailVerifySendOtp,
-  refreshToken
+  refreshToken,
+  ChangePassword,
+  PersonalInformation
 };

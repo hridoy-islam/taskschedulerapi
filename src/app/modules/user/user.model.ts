@@ -26,12 +26,9 @@ const userSchema = new Schema<TUser, UserModel>(
       enum: ["user", "admin", "company", "creator", "director"],
       default: "user",
     },
-    image: {
-      type: String,
-    },
     status: {
       type: String,
-      enum: UserStatus,
+      enum: ["block", "active"],
       default: "active",
     },
     company: {
@@ -55,7 +52,35 @@ const userSchema = new Schema<TUser, UserModel>(
     address: {
       type: String,
     },
+    image: {
+      type: String,
+    },
     phone: {
+      type: String,
+    },
+    jobTitle: {
+      type: String,
+    },
+    bio: {
+      type: String,
+    },
+    socialLinks: {
+      type: [String],
+      default: [],
+    },
+    companyType: {
+      type: String,
+    },
+    companyWebsite: {
+      type: String,
+    },
+    heardAboutUs: {
+      type: String,
+    },
+    industryType: {
+      type: String,
+    },
+    numberOfEmployees: {
       type: String,
     },
     googleUid: {
@@ -66,16 +91,78 @@ const userSchema = new Schema<TUser, UserModel>(
     },
     refreshToken: {
       type: String,
-      select:false
+      select: false,
     },
-    otpExpires: { type: Date, required: false },
+    otpExpiry: {
+      type: Date,
+    },
+    isUsed: {
+      type: Boolean,
+      default: false,
+    },
+    companyEmail: {
+      type: String,
+    },
+    isValided: {
+      type: Boolean,
+      default: false,
+    },
+    userAgentInfo: {
+      type: [
+        {
+          browser: {
+            name: { type: String },
+            version: { type: String },
+          },
+          os: {
+            name: { type: String },
+            version: { type: String },
+          },
+          device: {
+            model: { type: String },
+            type: { type: String },
+            vendor: { type: String },
+          },
+          cpu: {
+            architecture: { type: String },
+          },
+          ipAddress: {
+            type: String,
+            required: true,
+          },
+          macAddress: {
+            type: String,
+            required: true,
+          },
+          timestamp: {
+            type: Date,
+            default: Date.now,
+          },
+        },
+      ],
+      default: [],
+      select: false,
+    },
   },
   {
     timestamps: true,
   }
 );
 
-// Middleware to hash the password before saving
+userSchema.statics.hashPassword = async function (
+  plainTextPassword: string
+): Promise<string> {
+  try {
+    const hashedPassword = await bcrypt.hash(
+      plainTextPassword,
+      Number(config.bcrypt_salt_rounds)
+    );
+    return hashedPassword;
+  } catch (error) {
+    throw new Error("Error while hashing the password");
+  }
+};
+
 userSchema.pre("save", async function (next) {
   const user = this; // doc
   if (user.isModified("password")) {

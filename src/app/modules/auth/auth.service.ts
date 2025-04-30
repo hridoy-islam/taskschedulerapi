@@ -13,40 +13,126 @@ import config from "../../config";
 import catchAsync from "../../utils/catchAsync";
 import sendResponse from "../../utils/sendResponse";
 import moment from "moment";
+import * as UAParser from 'ua-parser-js';
 
+import requestIp from "request-ip";
+import crypto from "crypto";
 
-function generateOTP() {
+function generateOtpAndExpiry() {
   const otp = Math.floor(1000 + Math.random() * 9000).toString();
-  return otp;
+  const otpExpiry = moment().add(10, "minutes").toDate();
+
+  return { otp, otpExpiry };
 }
 
-const checkLogin = async (payload: TLogin) => {
+const checkLogin = async (payload: TLogin, req: any) => {
   try {
+    // Ensure req is available
+    if (!req) {
+      throw new AppError(httpStatus.BAD_REQUEST, "Request object is missing");
+    }
+
     const foundUser = await User.isUserExists(payload.email);
     if (!foundUser) {
-      throw new AppError(httpStatus.NOT_FOUND, "Login Detials is not correct");
+      throw new AppError(httpStatus.NOT_FOUND, "Login details are incorrect");
     }
+
     if (foundUser.isDeleted) {
       throw new AppError(
         httpStatus.NOT_FOUND,
-        "This Account Has Been Deleted."
+        "This account has been deleted."
       );
     }
 
-    if (!(await User.isPasswordMatched(payload?.password, foundUser?.password)))
-      throw new AppError(httpStatus.FORBIDDEN, "Password do not matched");
+    if (
+      !(await User.isPasswordMatched(payload?.password, foundUser?.password))
+    ) {
+      throw new AppError(httpStatus.FORBIDDEN, "Password does not match");
+    }
 
+    // Get the client's IP address
+    const ipAddress = requestIp.getClientIp(req);
+    if (!ipAddress) {
+      console.error("Could not retrieve IP address from request.");
+      throw new AppError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        "IP address retrieval failed"
+      );
+    }
+
+    // Parse user agent
+    const parser = new UAParser.UAParser(req.headers['user-agent']);
+    const uaResult = parser.getResult();
+
+    // Create device fingerprint
+    const deviceFingerprint = crypto
+      .createHash("sha256")
+      .update(req.headers["user-agent"] + req.headers["accept-language"])
+      .digest("hex");
+
+    // Prepare user agent info object
+    const userAgentInfo = {
+      browser: {
+        name: uaResult.browser.name,
+        version: uaResult.browser.version
+      },
+      os: {
+        name: uaResult.os.name,
+        version: uaResult.os.version
+      },
+      device: {
+        model: uaResult.device?.model || 'Desktop',
+        type: uaResult.device?.type || 'desktop',
+        vendor: uaResult.device?.vendor ||'unknown'
+      },
+      cpu: {
+        architecture: uaResult.cpu.architecture
+      },
+      ipAddress: ipAddress,
+      macAddress: deviceFingerprint,
+      timestamp: new Date()
+    };
+
+    // Update user with new login info
+    await User.findByIdAndUpdate(foundUser._id, {
+      $push: {
+        userAgentInfo: userAgentInfo
+      }
+    });
+
+    // Prepare JWT payload
     const jwtPayload = {
       _id: foundUser._id?.toString(),
       email: foundUser?.email,
       name: foundUser?.name,
       role: foundUser?.role,
-      authorized: foundUser?.authorized
+      authorized: foundUser?.authorized,
+      isValided: foundUser?.isValided,
     };
 
+    // If user is not authorized, generate OTP and send it
+    if (!foundUser.isValided) {
+      const { otp, otpExpiry } = generateOtpAndExpiry();
+
+      await User.findByIdAndUpdate(foundUser._id, {
+        otp,
+        otpExpiry,
+        isUsed: false,
+      });
+
+      const emailSubject = "Validate Your Profile with OTP";
+      await sendEmail(
+        foundUser.email,
+        "reset_password_template",
+        emailSubject,
+        foundUser.name,
+        otp
+      );
+    }
+
+    // Generate access and refresh tokens
     const accessToken = createToken(
       jwtPayload,
-
       config.jwt_access_secret as string,
       config.jwt_access_expires_in as string
     );
@@ -56,15 +142,19 @@ const checkLogin = async (payload: TLogin) => {
       config.jwt_refresh_secret as string,
       config.jwt_refresh_expires_in as string
     );
+
     return {
       accessToken,
       refreshToken,
     };
   } catch (error) {
-    throw new AppError(httpStatus.NOT_FOUND, "Details doesnt match");
+    console.error("Error in checkLogin service:", error);
+    throw new AppError(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      "An error occurred during login"
+    );
   }
 };
-
 const refreshToken = async (token: string) => {
   if (!token || typeof token !== "string") {
     throw new AppError(
@@ -74,7 +164,7 @@ const refreshToken = async (token: string) => {
   }
   const decoded = verifyToken(token, config.jwt_refresh_secret as string);
 
-  const {  email } = decoded;
+  const { email } = decoded;
 
   const foundUser = await User.isUserExists(email);
 
@@ -83,7 +173,7 @@ const refreshToken = async (token: string) => {
   }
 
   try {
-    const jwtPayload= {
+    const jwtPayload = {
       _id: foundUser._id.toString(),
       email: foundUser.email,
       name: foundUser.name,
@@ -187,26 +277,33 @@ const createUserIntoDB = async (payload: TCreateUser) => {
     throw new AppError(httpStatus.NOT_FOUND, "This user is already exits!");
   }
 
-
-  const otp = generateOTP();
+  // const { otp, otpExpiry } = generateOtpAndExpiry();
   const newUserPayload = {
     ...payload,
-    otp,
+    // otp,
+    // otpExpiry
   };
 
   const result = await User.create(newUserPayload);
 
   try {
+    // const emailSubject = 'Your Password Reset OTP';
     // await sendEmail(
-    //   payload.email,             
-    //   'welcome_template',                 
-    //   'Welcome to Task Planner', 
-    //   payload.name               
+    //   payload.email,
+    //   'reset_password_template',
+    //   emailSubject,
+    //   payload.name,
+    //   otp
     // );
 
-    await sendEmail(payload.email, 'welcome_template', "Welcome to Task Planner", payload.name);
+    await sendEmail(
+      payload.email,
+      "welcome_template",
+      "Welcome to Task Planner",
+      payload.name
+    );
   } catch (error) {
-    console.error('Error sending welcome email:', error);
+    console.error("Error sending welcome email:", error);
   }
 
   return result;
@@ -217,36 +314,41 @@ const EmailSendOTP = async (email: string) => {
   if (!user) {
     throw new AppError(httpStatus.NOT_FOUND, "No User Found");
   }
-  // Generate OTP
-  const otp = Math.floor(1000 + Math.random() * 9000).toString(); // 4-digit OTP
-  await User.updateOne({ email }, { otp });
-  // send email
+  const { otp, otpExpiry } = generateOtpAndExpiry();
+
+  const emailSubject = "Validate Your Profile with OTP";
+  await sendEmail(
+    user.email,
+    "reset_password_template",
+    emailSubject,
+    user.name,
+    otp
+  );
+
+  await User.updateOne({ email }, { otp, otpExpiry });
 };
-
-
-
 
 export const verifyEmailIntoDB = async (email: string, otp: string) => {
   const foundUser = await User.findOne({ email: email.toLowerCase() });
 
   if (!foundUser) {
-    throw new AppError(httpStatus.NOT_FOUND, 'Email is not correct');
+    throw new AppError(httpStatus.NOT_FOUND, "Email is not correct");
   }
 
   // Check OTP
   if (foundUser.otp !== otp) {
-    throw new AppError(httpStatus.BAD_REQUEST, 'Invalid OTP!');
+    throw new AppError(httpStatus.BAD_REQUEST, "Invalid OTP!");
   }
 
   // Check OTP expiry using moment
   if (foundUser.otpExpires && moment().isAfter(moment(foundUser.otpExpires))) {
-    throw new AppError(httpStatus.BAD_REQUEST, 'OTP has expired');
+    throw new AppError(httpStatus.BAD_REQUEST, "OTP has expired");
   }
 
   // Update user: mark as authorized and clear OTP
   await User.updateOne(
     { email: email.toLowerCase() },
-    { authorized: true, otp: '', otpExpires: null }
+    { otp: "", otpExpires: null, isValided: true }
   );
 
   const jwtPayload = {
@@ -254,6 +356,7 @@ export const verifyEmailIntoDB = async (email: string, otp: string) => {
     email: foundUser.email,
     name: foundUser.name,
     role: foundUser.role,
+    isValided: foundUser.isValided
   };
 
   const accessToken = createToken(
@@ -270,7 +373,7 @@ export const verifyEmailIntoDB = async (email: string, otp: string) => {
 
   return {
     accessToken,
-    refreshToken
+    refreshToken,
   };
 };
 
@@ -292,7 +395,6 @@ export const verifyEmailIntoDB = async (email: string, otp: string) => {
 //   sendEmail(user.email, resetUILink);
 // };
 
-
 const forgetPasswordOtp = async (email: string) => {
   const user = await User.isUserExists(email);
   if (!user) {
@@ -300,30 +402,157 @@ const forgetPasswordOtp = async (email: string) => {
   }
 };
 
-const resetPassword = async (
-  payload: { email: string; newPassword: string },
-  token: string
-) => {
-  const user = await User.findOne({ email: payload.email }).select('+password');
+const resetPassword = async (payload: { userId: string; password: string }) => {
+  // Corrected line: passing the userId in an object
+  const user = await User.findOne({ _id: payload.userId }).select("+password");
+
   if (!user) {
     throw new AppError(httpStatus.NOT_FOUND, "This user is not found !");
   }
-  
-  const decoded = jwt.verify(
-    token,
-    config.jwt_access_secret as string
-  ) as JwtPayload;
-  
-  if (payload.email !== decoded.email) {
-    throw new AppError(httpStatus.FORBIDDEN, "You are forbidden!");
-  }
-  
-  user.password = payload.newPassword;
-  await user.save(); 
-  
 
-  return user;
+  // const decoded = jwt.verify(token, config.jwt_access_secret as string) as JwtPayload;
+
+  // if (payload.userId !== decoded._id) {
+  //   throw new AppError(httpStatus.FORBIDDEN, "You are forbidden!");
+  // }
+  //   console.log("New Password:", payload.password);  // Should be a non-empty string
+  //   console.log("Salt Rounds:", config.bcrypt_salt_rounds);  // Should be a valid number
+
+  //   const salt = await bcrypt.genSalt(Number(config.bcrypt_salt_rounds));
+  // const hashedPassword = await bcrypt.hash(payload.password,salt );
+
+  user.password = payload.password;
+  await user.save();
+
+  return { message: "Password updated successfully" };
 };
+
+const ChangePassword = async (
+  userId: string,
+  currentPassword: string,
+  newPassword: string
+) => {
+  // Step 1: Find the user by ID
+  const user = await User.findById(userId).select("+password");
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, "User not found!");
+  }
+
+  // Step 2: Verify the current password
+  const isPasswordValid = await User.isPasswordMatched(
+    currentPassword,
+    user.password
+  );
+  if (!isPasswordValid) {
+    throw new AppError(httpStatus.BAD_REQUEST, "Current password is incorrect");
+  }
+
+  user.password = newPassword;
+  await user.save();
+
+  // Return success message
+  return { message: "Password updated successfully" };
+};
+
+const requestOtp = async (email: string) => {
+  const foundUser = await User.isUserExists(email);
+  if (!foundUser) {
+    throw new AppError(httpStatus.NOT_FOUND, "Email is not correct");
+  }
+
+  const { otp, otpExpiry } = generateOtpAndExpiry();
+
+  await User.findByIdAndUpdate(foundUser._id, {
+    otp,
+    otpExpiry,
+    isUsed: false,
+  });
+  const emailSubject = "Your Password Reset OTP";
+
+  await sendEmail(
+    email,
+    "reset_password_template",
+    emailSubject,
+    foundUser.name,
+    otp
+  );
+};
+
+const validateOtp = async (email: string, otp: string) => {
+  // Check if the user exists
+  const foundUser = await User.isUserExists(email.toLowerCase());
+  if (!foundUser) {
+    console.log("User not found for email:", email);
+    throw new AppError(httpStatus.NOT_FOUND, "Email not found");
+  }
+
+  // Check if the OTP is linked to a valid reset request and is not already used
+  const passwordReset = await User.findOne({
+    _id: foundUser._id,
+    isUsed: false,
+  });
+
+  if (!passwordReset || passwordReset.otp !== otp) {
+    throw new AppError(httpStatus.UNAUTHORIZED, "Invalid OTP");
+  }
+
+  // Check if OTP has expired using moment
+  if (moment(passwordReset.otpExpiry).isBefore(moment())) {
+    console.log(
+      "OTP Expired. Expiry Time:",
+      passwordReset.otpExpiry,
+      "Current Time:",
+      moment().toDate()
+    );
+    throw new AppError(httpStatus.FORBIDDEN, "OTP has expired");
+  }
+
+  // Mark OTP as used
+  passwordReset.isUsed = true;
+  await passwordReset.save();
+
+  // Create the reset token (JWT)
+  const resetToken = jwt.sign(
+    {
+      _id: foundUser._id.toString(),
+      email: foundUser.email,
+      name: foundUser.name,
+      role: foundUser.role,
+    },
+    `${config.jwt_access_secret}`,
+    { expiresIn: "10m" } // Set token expiry to 10 minutes
+  );
+
+  // Send confirmation email to the user
+  await sendEmail(
+    email,
+    "validated_otp_template",
+    "OTP Validated Successfully",
+    foundUser.name
+  );
+
+  // Return the reset token for further use
+  return { resetToken };
+};
+const personalInformationIntoDB = async (id: string, payload:any) => {
+  const user = await User.findById(id);
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, "User not found");
+  }
+
+  const result = await User.findByIdAndUpdate(id, payload, {
+    new: true,
+    runValidators: true,
+  });
+
+  return result;
+};
+
+
+
+
+
+
 
 export const AuthServices = {
   checkLogin,
@@ -334,4 +563,9 @@ export const AuthServices = {
   verifyEmailIntoDB,
   EmailSendOTP,
   refreshToken,
+  ChangePassword,
+  validateOtp,
+  requestOtp,
+  personalInformationIntoDB
+  
 };

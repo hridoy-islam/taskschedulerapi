@@ -21,6 +21,10 @@ const lastSeenSchema = new Schema<TLastSeen>(
   }
 );
 
+
+const frequencyOptions = ["once", "daily", "weekdays", "weekly", "monthly", "custom"] as const;
+type TaskFrequency = typeof frequencyOptions[number];
+
 const taskSchema = new Schema<TTask>(
   {
     taskName: {
@@ -66,6 +70,38 @@ const taskSchema = new Schema<TTask>(
       type: Boolean,
       default: false,
     },
+
+    frequency: {
+      type: String , 
+      enum: frequencyOptions,
+      default:"once"
+    },
+    scheduledAt: {
+      type: Date, 
+    },
+    scheduledDays: {
+      type: [Number], // For weekly tasks (days of the week, e.g., [0, 1, 2] for Sun, Mon, Tue)
+    },
+    scheduledDate: {
+      type: Number, // For weekly tasks (days of the week, e.g., [0, 1, 2] for Sun, Mon, Tue)
+    },
+   
+    customSchedule: {
+      type: [Date], // For custom tasks (specific dates in ISO format)
+    },
+    history: [
+      {
+        date: {
+          type: Date,
+          required: true,
+        },
+        completed: {
+          type: Boolean,
+          required: true,
+        },
+      },
+    ],
+
     importantBy: [{ type: Schema.Types.ObjectId, ref: "User",default: []  }],
   },
   {
