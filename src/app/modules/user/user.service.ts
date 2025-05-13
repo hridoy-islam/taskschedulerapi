@@ -28,7 +28,6 @@ const getSingleUserFromDB = async (id: string) => {
 };
 
 const updateUserIntoDB = async (id: string, payload: Partial<TUser>) => {
-  console.log(payload)
   const user = await User.findById(id);
   if (!user) {
     throw new AppError(httpStatus.NOT_FOUND, "User not found");

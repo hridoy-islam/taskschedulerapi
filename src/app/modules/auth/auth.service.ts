@@ -13,7 +13,7 @@ import config from "../../config";
 import catchAsync from "../../utils/catchAsync";
 import sendResponse from "../../utils/sendResponse";
 import moment from "moment";
-import * as UAParser from 'ua-parser-js';
+import * as UAParser from "ua-parser-js";
 
 import requestIp from "request-ip";
 import crypto from "crypto";
@@ -61,7 +61,7 @@ const checkLogin = async (payload: TLogin, req: any) => {
     }
 
     // Parse user agent
-    const parser = new UAParser.UAParser(req.headers['user-agent']);
+    const parser = new UAParser.UAParser(req.headers["user-agent"]);
     const uaResult = parser.getResult();
 
     // Create device fingerprint
@@ -74,31 +74,39 @@ const checkLogin = async (payload: TLogin, req: any) => {
     const userAgentInfo = {
       browser: {
         name: uaResult.browser.name,
-        version: uaResult.browser.version
+        version: uaResult.browser.version,
       },
       os: {
         name: uaResult.os.name,
-        version: uaResult.os.version
+        version: uaResult.os.version,
       },
       device: {
-        model: uaResult.device?.model || 'Desktop',
-        type: uaResult.device?.type || 'desktop',
-        vendor: uaResult.device?.vendor ||'unknown'
+        model: uaResult.device?.model || "Desktop",
+        type: uaResult.device?.type || "desktop",
+        vendor: uaResult.device?.vendor || "unknown",
       },
       cpu: {
-        architecture: uaResult.cpu.architecture
+        architecture: uaResult.cpu.architecture,
       },
       ipAddress: ipAddress,
       macAddress: deviceFingerprint,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
 
-    // Update user with new login info
-    await User.findByIdAndUpdate(foundUser._id, {
-      $push: {
-        userAgentInfo: userAgentInfo
-      }
-    });
+    const existingLoginInfo = foundUser.userAgentInfo || [] ;
+
+    const alreadyLoggedInFromSameDevice = existingLoginInfo.some(
+      (info) =>
+        info.ipAddress === ipAddress || info.macAddress === deviceFingerprint
+    );
+
+    if (!alreadyLoggedInFromSameDevice) {
+      await User.findByIdAndUpdate(foundUser._id, {
+        $push: {
+          userAgentInfo: userAgentInfo,
+        },
+      });
+    }
 
     // Prepare JWT payload
     const jwtPayload = {
@@ -120,10 +128,10 @@ const checkLogin = async (payload: TLogin, req: any) => {
         isUsed: false,
       });
 
-      const emailSubject = "Validate Your Profile with OTP";
+      const emailSubject = "Please Verify Your Email Address for Task Planner";
       await sendEmail(
         foundUser.email,
-        "reset_password_template",
+        "verify_email_template",
         emailSubject,
         foundUser.name,
         otp
@@ -155,6 +163,7 @@ const checkLogin = async (payload: TLogin, req: any) => {
     );
   }
 };
+
 const refreshToken = async (token: string) => {
   if (!token || typeof token !== "string") {
     throw new AppError(
@@ -299,7 +308,7 @@ const createUserIntoDB = async (payload: TCreateUser) => {
     await sendEmail(
       payload.email,
       "welcome_template",
-      "Welcome to Task Planner",
+      "Welcome to Task Planner – Let’s Get Started!",
       payload.name
     );
   } catch (error) {
@@ -356,7 +365,7 @@ export const verifyEmailIntoDB = async (email: string, otp: string) => {
     email: foundUser.email,
     name: foundUser.name,
     role: foundUser.role,
-    isValided: foundUser.isValided
+    isValided: foundUser.isValided,
   };
 
   const accessToken = createToken(
@@ -467,7 +476,7 @@ const requestOtp = async (email: string) => {
     otpExpiry,
     isUsed: false,
   });
-  const emailSubject = "Your Password Reset OTP";
+  const emailSubject = "Reset Your Task Planner Password";
 
   await sendEmail(
     email,
@@ -534,7 +543,7 @@ const validateOtp = async (email: string, otp: string) => {
   // Return the reset token for further use
   return { resetToken };
 };
-const personalInformationIntoDB = async (id: string, payload:any) => {
+const personalInformationIntoDB = async (id: string, payload: any) => {
   const user = await User.findById(id);
   if (!user) {
     throw new AppError(httpStatus.NOT_FOUND, "User not found");
@@ -548,12 +557,6 @@ const personalInformationIntoDB = async (id: string, payload:any) => {
   return result;
 };
 
-
-
-
-
-
-
 export const AuthServices = {
   checkLogin,
   createUserIntoDB,
@@ -566,6 +569,5 @@ export const AuthServices = {
   ChangePassword,
   validateOtp,
   requestOtp,
-  personalInformationIntoDB
-  
+  personalInformationIntoDB,
 };
