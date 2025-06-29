@@ -54,7 +54,7 @@ app.use("/uploads", express.static("uploads"));
 
 app.use(
   cors({
-    origin: ['http://localhost:5173', 'https://api.taskplanner.co.uk'], 
+    origin: ['http://localhost:5173', 'https://api.taskplanner.co.uk','https://taskplanner.co.uk'], 
     credentials: true,
   }),
 );
