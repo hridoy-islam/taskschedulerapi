@@ -325,10 +325,10 @@ const EmailSendOTP = async (email: string) => {
   }
   const { otp, otpExpiry } = generateOtpAndExpiry();
 
-  const emailSubject = "Validate Your Profile with OTP";
+  const emailSubject = "Please Verify Your Email Address for Task Planner";
   await sendEmail(
     user.email,
-    "reset_password_template",
+    "verify_email_template",
     emailSubject,
     user.name,
     otp

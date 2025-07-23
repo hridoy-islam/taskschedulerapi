@@ -9,7 +9,7 @@
 work.json
 auth.json
 .env*
-
+task.json
 
 # testing
 /coverage

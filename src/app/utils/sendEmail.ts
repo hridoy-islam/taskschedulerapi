@@ -1,6 +1,9 @@
 import nodemailer from "nodemailer";
 import ejs from "ejs";
 import config from "../config";
+require("dotenv").config();
+const { google } = require("googleapis");
+
 
 export const sendEmail = async (
   to: string,
@@ -9,18 +12,47 @@ export const sendEmail = async (
   username: string,
   otp?: string
 ) => {
-  const transporter = nodemailer.createTransport({
-    host: "smtp-relay.gmail.com",
-    port: 587,
-    secure: false,
 
+
+    const oAuth2Client = new google.auth.OAuth2(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET,
+    "https://developers.google.com/oauthplayground"
+  );
+
+  oAuth2Client.setCredentials({
+    refresh_token: process.env.GOOGLE_REFRESH_TOKEN,
+  });
+
+
+  // const transporter = nodemailer.createTransport({
+  //   host: "smtp-relay.gmail.com",
+  //   port: 587,
+  //   secure: false,
+
+  //   auth: {
+  //     // TODO: replace `user` and `pass` values from <https://forwardemail.net>
+  //     user: "noreply@taskplanner.co.uk",
+  //     pass: "ddgc rryi lucp ckwx",
+  //   },
+  //   tls: {
+  //     rejectUnauthorized: false,
+  //   },
+  // });
+
+
+    const transporter = nodemailer.createTransport({
+    // host: "smtp.ionos.co.uk",
+    // port: 587,
+    // secure: false,
+    service: "Gmail",
     auth: {
-      // TODO: replace `user` and `pass` values from <https://forwardemail.net>
-      user: "noreply@taskplanner.co.uk",
-      pass: "ddgc rryi lucp ckwx",
-    },
-    tls: {
-      rejectUnauthorized: false,
+      type: "OAuth2",
+      user: process.env.SENDER_EMAIL,
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      refreshToken: process.env.GOOGLE_REFRESH_TOKEN,
+      accessToken: process.env.GOOGLE_ACCESS_TOKEN,
     },
   });
 
@@ -40,7 +72,7 @@ export const sendEmail = async (
         console.log(err);
       } else {
         var mainOptions = {
-          from: "noreply@taskplanner.co.uk",
+          from: process.env.SENDER_EMAIL,
           to,
           subject,
           html: data,
