@@ -17,6 +17,7 @@ export enum TaskFrequency {
   CUSTOM = "custom",
 }
 
+
 interface IHistory {
   date: Date;
   completed: boolean;
@@ -38,7 +39,7 @@ export interface TTask {
   updatedAt: Date;
   seen: boolean;
   importantBy: Types.ObjectId[];
-  frequency: TaskFrequency;
+  frequency: string;
   scheduledAt?: Date;
   scheduledDays?: number[];
   customSchedule?: Date[];

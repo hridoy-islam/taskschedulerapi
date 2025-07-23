@@ -4,7 +4,6 @@ import config from "../config";
 require("dotenv").config();
 const { google } = require("googleapis");
 
-
 export const sendEmail = async (
   to: string,
   template: string,
@@ -13,8 +12,12 @@ export const sendEmail = async (
   otp?: string
 ) => {
 
+  console.log("[sendEmail] Function called");
+  console.log(`[sendEmail] To: ${to}, Subject: ${subject}, Template: ${template}`);
 
-    const oAuth2Client = new google.auth.OAuth2(
+
+
+  const oAuth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
     "https://developers.google.com/oauthplayground"
@@ -23,7 +26,6 @@ export const sendEmail = async (
   oAuth2Client.setCredentials({
     refresh_token: process.env.GOOGLE_REFRESH_TOKEN,
   });
-
 
   // const transporter = nodemailer.createTransport({
   //   host: "smtp-relay.gmail.com",
@@ -40,8 +42,7 @@ export const sendEmail = async (
   //   },
   // });
 
-
-    const transporter = nodemailer.createTransport({
+  const transporter = nodemailer.createTransport({
     // host: "smtp.ionos.co.uk",
     // port: 587,
     // secure: false,
@@ -77,6 +78,7 @@ export const sendEmail = async (
           subject,
           html: data,
         };
+        console.log("[sendEmail] Sending email...");
         transporter.sendMail(mainOptions, function (err, info) {
           if (err) {
             console.log(err);

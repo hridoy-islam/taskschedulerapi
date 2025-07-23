@@ -87,14 +87,28 @@ const getMessagesFromDB = async (id: string, page: number, limit: number, reques
     .limit(limit); 
 
 
+    // await Promise.all(
+    //   results.map(async (result) => {
+    //     if (!result.seenBy.includes(requester._id)) {
+    //       result.seenBy.push(requester._id); // Add the user to the `seenBy` array
+    //       await result.save(); // Save the updated message
+    //     }
+    //   })
+    // );
+
     await Promise.all(
-      results.map(async (result) => {
-        if (!result.seenBy.includes(requester._id)) {
-          result.seenBy.push(requester._id); // Add the user to the `seenBy` array
-          await result.save(); // Save the updated message
-        }
-      })
-    );
+  results.map(async (result) => {
+    if (!Array.isArray(result.seenBy)) {
+      result.seenBy = []; // Ensure it's initialized
+    }
+
+    if (!result.seenBy.includes(requester._id)) {
+      result.seenBy.push(requester._id);
+      await result.save();
+    }
+  })
+);
+
 
   return results;
 };

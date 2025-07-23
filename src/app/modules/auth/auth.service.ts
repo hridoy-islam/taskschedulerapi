@@ -350,14 +350,14 @@ export const verifyEmailIntoDB = async (email: string, otp: string) => {
   }
 
   // Check OTP expiry using moment
-  if (foundUser.otpExpires && moment().isAfter(moment(foundUser.otpExpires))) {
+  if (foundUser.otpExpiry && moment().isAfter(moment(foundUser.otpExpiry))) {
     throw new AppError(httpStatus.BAD_REQUEST, "OTP has expired");
   }
 
   // Update user: mark as authorized and clear OTP
   await User.updateOne(
     { email: email.toLowerCase() },
-    { otp: "", otpExpires: null, isValided: true }
+    { otp: "", otpExpiry: null, isValided: true }
   );
 
   const jwtPayload = {
