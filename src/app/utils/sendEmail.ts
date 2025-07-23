@@ -12,10 +12,7 @@ export const sendEmail = async (
   otp?: string
 ) => {
 
-  console.log("[sendEmail] Function called");
-  console.log(`[sendEmail] To: ${to}, Subject: ${subject}, Template: ${template}`);
-
-
+ 
 
   const oAuth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
@@ -78,7 +75,6 @@ export const sendEmail = async (
           subject,
           html: data,
         };
-        console.log("[sendEmail] Sending email...");
         transporter.sendMail(mainOptions, function (err, info) {
           if (err) {
             console.log(err);
