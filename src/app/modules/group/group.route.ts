@@ -14,7 +14,7 @@ router.post(
   auth("admin", "director", "company", "creator", "user"),
   GroupControllers.createGroup
 );
-// get single group
+// get single user  group
 router.get(
   "/single",
   auth("admin", "director", "company", "creator", "user"),

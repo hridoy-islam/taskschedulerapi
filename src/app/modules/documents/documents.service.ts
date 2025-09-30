@@ -2,22 +2,19 @@ import { Storage } from "@google-cloud/storage";
 import httpStatus from "http-status";
 import AppError from "../../errors/AppError";
 
-
 import { User } from "../user/user.model";
 import { GroupMessage } from "../groupMessage/message.model";
 import { Group } from "../group/group.model";
-
-
 
 const storage = new Storage({
   keyFilename: "./work.json",
   projectId: "vast-pride-453709-n7",
 });
-const bucketName = "taskplanner"; 
+const bucketName = "taskplanner";
 const bucket = storage.bucket(bucketName);
 
 const UploadDocumentToGCS = async (file: any, payload: any) => {
-  const { entityId, file_type,   } = payload;
+  const { entityId, file_type } = payload;
   try {
     if (!file) throw new AppError(httpStatus.BAD_REQUEST, "No file provided");
 
@@ -56,36 +53,32 @@ const UploadDocumentToGCS = async (file: any, payload: any) => {
       const user = await User.findById(entityId);
       if (!user) throw new AppError(httpStatus.NOT_FOUND, "User not found");
 
-      user.image = fileUrl; 
+      user.image = fileUrl;
       await user.save();
 
-
       return { entityId, file_type, fileUrl };
-    }
-     else if(file_type === "groupDoc"){
-      
+    } else if (file_type === "groupDoc") {
       return { entityId, file_type, fileUrl };
-    }
-     else if(file_type === "taskDoc"){
-      
+    } else if (file_type === "taskDoc") {
       return { entityId, file_type, fileUrl };
-    }
-     else if(file_type === "groupImg"){
+    } else if (file_type === "groupImg") {
       const group = await Group.findById(entityId);
       if (!group) throw new AppError(httpStatus.NOT_FOUND, "Group not found");
 
-      group.image = fileUrl; 
+      group.image = fileUrl;
       await group.save();
 
       return { entityId, file_type, fileUrl };
+    } else {
+      return { entityId, file_type, fileUrl };
     }
+
     // else if(file_type === "transaction"){
     //   const transaction = await Transaction.findById(entityId);
     //   if (!transaction) throw new AppError(httpStatus.NOT_FOUND, "Transaction not found");
 
-    //   transaction.transactionDoc = fileUrl; 
+    //   transaction.transactionDoc = fileUrl;
     //   await transaction.save();
-
 
     //   return { entityId, file_type, fileUrl };
     // }

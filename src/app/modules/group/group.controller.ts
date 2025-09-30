@@ -112,7 +112,7 @@ const removeGroupMember = catchAsync(async (req, res) => {
 const updateUsersRoleInGroup = catchAsync(async (req, res) => {
   const { groupId, userId, role } = req.body;
   if (!groupId || !userId || !role) {
-    sendResponse(res, {
+     sendResponse(res, {
       statusCode: httpStatus.BAD_REQUEST,
       success: false,
       message: "Please provide groupId, userId and role",
@@ -121,7 +121,7 @@ const updateUsersRoleInGroup = catchAsync(async (req, res) => {
   }
   const requester = req.user as { _id: string; role: string };
   const result = await GroupServices.updateUserPermission(groupId, userId,requester?._id, role );
-  sendResponse(res, {
+   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
     message: "User role is updated",
