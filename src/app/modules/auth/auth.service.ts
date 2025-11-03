@@ -31,8 +31,8 @@ const checkLogin = async (payload: TLogin, req: any) => {
     if (!req) {
       throw new AppError(httpStatus.BAD_REQUEST, "Request object is missing");
     }
-
-    const foundUser = await User.isUserExists(payload.email);
+const normalizedEmail = payload.email.toLowerCase();
+    const foundUser = await User.isUserExists(normalizedEmail);
     if (!foundUser) {
       throw new AppError(httpStatus.NOT_FOUND, "Login details are incorrect");
     }
@@ -281,7 +281,11 @@ const googleLogin = async (payload: {
 };
 
 const createUserIntoDB = async (payload: TCreateUser) => {
-  const user = await User.isUserExists(payload.email);
+
+  const normalizedEmail = payload.email.toLowerCase();
+
+
+  const user = await User.isUserExists(normalizedEmail);
   if (user) {
     throw new AppError(httpStatus.NOT_FOUND, "This user is already exits!");
   }
@@ -289,6 +293,7 @@ const createUserIntoDB = async (payload: TCreateUser) => {
   // const { otp, otpExpiry } = generateOtpAndExpiry();
   const newUserPayload = {
     ...payload,
+    email: normalizedEmail,
     // otp,
     // otpExpiry
   };
@@ -298,7 +303,7 @@ const createUserIntoDB = async (payload: TCreateUser) => {
   try {
     // const emailSubject = 'Your Password Reset OTP';
     // await sendEmail(
-    //   payload.email,
+    //  normalizedEmail,
     //   'reset_password_template',
     //   emailSubject,
     //   payload.name,
@@ -306,7 +311,7 @@ const createUserIntoDB = async (payload: TCreateUser) => {
     // );
 
     await sendEmail(
-      payload.email,
+      normalizedEmail,
       "welcome_template",
       "Welcome to Task Planner – Let’s Get Started!",
       payload.name
@@ -464,7 +469,8 @@ const ChangePassword = async (
 };
 
 const requestOtp = async (email: string) => {
-  const foundUser = await User.isUserExists(email);
+  const normalizedEmail = email.toLowerCase();
+  const foundUser = await User.isUserExists(normalizedEmail);
   if (!foundUser) {
     throw new AppError(httpStatus.NOT_FOUND, "Email is not correct");
   }
@@ -479,7 +485,7 @@ const requestOtp = async (email: string) => {
   const emailSubject = "Reset Your Task Planner Password";
 
   await sendEmail(
-    email,
+    normalizedEmail,
     "reset_password_template",
     emailSubject,
     foundUser.name,
