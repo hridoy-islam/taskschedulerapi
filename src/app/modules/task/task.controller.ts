@@ -34,6 +34,16 @@ const getSingleTask = catchAsync(async (req, res) => {
     data: result,
   });
 });
+const reassignTask = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  const result = await TaskServices.reassignTaskFromDB(id);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Task reassigned succesfully",
+    data: result,
+  });
+});
 
 const updateTask = catchAsync(async (req, res) => {
   const { id } = req.params;
@@ -54,6 +64,28 @@ const getTaskForUsers = catchAsync(async (req, res) => {
     statusCode: httpStatus.OK,
     success: true,
     message: "Task is Fetched succesfully",
+    data: result,
+  });
+});
+const getNeedToFinishTaskForUsers = catchAsync(async (req, res) => {
+  const { authorId, assignedId } = req.params;
+  const queryParams = req.query;
+  const result = await TaskServices.getNeedToFinishTasksBoth(authorId, assignedId, queryParams);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Task is Finished succesfully",
+    data: result,
+  });
+});
+const getCompleteTaskForUsers = catchAsync(async (req, res) => {
+  const { authorId, assignedId } = req.params;
+  const queryParams = req.query;
+  const result = await TaskServices.getcompleteTasksBoth(authorId, assignedId, queryParams);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Task is completed succesfully",
     data: result,
   });
 });
@@ -81,6 +113,17 @@ const getUpcommingTask = catchAsync(async (req, res) => {
     data: result,
   });
 });
+const getImportantTaskByUser = catchAsync(async (req, res) => {
+  const { userId } = req.params;
+  const queryParams = req.query; 
+  const result = await TaskServices.getImportantTaskByUser(userId, queryParams);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Upcomming Task is Fetched succesfully",
+    data: result,
+  });
+});
 
 const getAssignedTask = catchAsync(async (req, res) => {
   const { authorId } = req.params;
@@ -90,6 +133,18 @@ const getAssignedTask = catchAsync(async (req, res) => {
     statusCode: httpStatus.OK,
     success: true,
     message: "Asssigned Task is Fetched succesfully",
+    data: result,
+  });
+});
+
+const getNeedToFinishTask = catchAsync(async (req, res) => {
+  const { authorId } = req.params;
+  const queryParams = req.query; 
+  const result = await TaskServices.getNeedToFinishTasks(authorId, queryParams);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Need To Finish Task is Fetched succesfully",
     data: result,
   });
 });
@@ -183,5 +238,10 @@ export const TaskControllers = {
   getPlannerTasksByDay,
   getAssignedTask,
   updateReadComment,
-  getAllTaskForUser
+  getAllTaskForUser,
+  reassignTask,
+  getNeedToFinishTaskForUsers,
+  getCompleteTaskForUsers,
+  getNeedToFinishTask,
+  getImportantTaskByUser
 };

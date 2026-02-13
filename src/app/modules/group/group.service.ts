@@ -86,7 +86,7 @@ const getAllGroupFromDB = async (query: Record<string, unknown>, requester: any)
     throw new AppError(httpStatus.FORBIDDEN, "You are not authorized");
   }
   const groupQuery = new QueryBuilder(
-    Group.find().populate("groupName status members"), // Populate relevant fields
+    Group.find().populate("groupName status members creator"), 
     query
   )
     .search(GroupSearchableFields)
@@ -130,8 +130,8 @@ const getGroupsByUserId = async (userData: any) => {
 
   // Fetch groups where the user is a member
   const groups = await Group.find({
-    "members._id": userObjectId, // Ensure proper matching with ObjectId
-  });
+  "members._id": userObjectId,
+}).populate("creator", "name email image");
 
   // get the message count for each group
   const groupWithMessageCount = await Promise.all(groups.map(async (group) => {
@@ -181,6 +181,10 @@ const getSingleGroupFromDB = async (id: string, requester: any) => {
     path: "members._id",
     select: "name email image",
     transform: (user) => (user ? { name: user.name, email: user.email, _id:user._id, image: user.image } : null),
+  }).populate({
+    path: "creator",
+    select: "name email image",
+    
   });
 
   if (!groupData) {

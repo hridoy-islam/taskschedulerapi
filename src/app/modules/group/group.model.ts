@@ -40,7 +40,7 @@ const groupSchema = new Schema<TGroup>(
     creator: {
       type: Schema.Types.ObjectId,
       required: true,
-      ref: "User", // Assuming there's a User model
+      ref: "User", 
     },
     company: {
       type: Schema.Types.ObjectId,

@@ -44,7 +44,9 @@ export interface TTask {
   scheduledDays?: number[];
   customSchedule?: Date[];
   history: IHistory[];
-  scheduledDate?:number
+  scheduledDate?:number,
+  completedBy:any,
+  priority:string
 
 }
 

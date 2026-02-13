@@ -24,13 +24,22 @@ const GroupMessageSchema = new Schema<TGroupMessage>(
     seenBy: [
       {
         type: Schema.Types.ObjectId,
-        ref: "User", // Reference to the User who has seen the comment
-      }]
+        ref: "User",
+      },
+    ],
+    mentionBy: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
   },
   {
     timestamps: true,
-  }
+  },
 );
 
-
-export const GroupMessage = model<TGroupMessage>("GroupMessage", GroupMessageSchema);
+export const GroupMessage = model<TGroupMessage>(
+  "GroupMessage",
+  GroupMessageSchema,
+);

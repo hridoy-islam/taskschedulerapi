@@ -116,6 +116,7 @@ const normalizedEmail = payload.email.toLowerCase();
       role: foundUser?.role,
       authorized: foundUser?.authorized,
       isValided: foundUser?.isValided,
+      company:foundUser?.company?.toString()
     };
 
     // If user is not authorized, generate OTP and send it

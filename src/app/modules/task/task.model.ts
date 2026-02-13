@@ -21,6 +21,20 @@ const lastSeenSchema = new Schema<TLastSeen>(
   }
 );
 
+const compeleteSchema = new Schema<TLastSeen>(
+  {
+   
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+   
+  },
+  {
+    timestamps: true,
+  }
+);
+
 
 const frequencyOptions = ["once", "daily", "weekdays", "weekly", "monthly", "custom"] as const;
 type TaskFrequency = typeof frequencyOptions[number];
@@ -44,16 +58,22 @@ const taskSchema = new Schema<TTask>(
     lastSeen: [lastSeenSchema],
     assigned: {
       type: Schema.Types.ObjectId,
-      ref: "User", // Assuming tasks are assigned to users
+      ref: "User", 
     },
+    completedBy: [compeleteSchema],
     company: {
       type: Schema.Types.ObjectId,
-      ref: "User", // Assuming tasks are assigned to users
+      ref: "User",
     },
     status: {
       type: String,
       enum: ["pending", "completed"],
       default: "pending",
+    },
+      priority: {
+      type: String,
+      enum: ["low", "medium","high"],
+      default: "low",
     },
     dueDate: {
       type: Date,

@@ -9,6 +9,8 @@ import { GroupRoutes } from "../modules/group/group.route";
 import { GroupMessageRoutes } from '../modules/groupMessage/message.route';
 import { NotificationsRoutes } from "../modules/notification/notification.route";
 import { UploadDocumentRoutes } from "../modules/documents/documents.route";
+import { CompanyReportRoutes } from "../modules/companyReport/companyReport.router";
+import { SubscriptionPlanRoutes } from "../modules/subscriptionPlan/subscriptionPlan.router";
 
 const router = Router();
 
@@ -52,6 +54,14 @@ const moduleRoutes = [
   {
     path: "/documents",
     route: UploadDocumentRoutes,
+  },
+    {
+    path: "/company-report",
+    route: CompanyReportRoutes,
+  },
+    {
+    path: "/subscription-plans",
+    route: SubscriptionPlanRoutes,
   },
 ];
 

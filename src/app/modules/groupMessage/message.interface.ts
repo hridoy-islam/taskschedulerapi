@@ -7,5 +7,6 @@ export interface TGroupMessage {
   authorId: mongoose.Types.ObjectId;
   isFile?: boolean;
   seenBy?: mongoose.Types.ObjectId[];
+  mentionBy?: mongoose.Types.ObjectId[];
 
 }

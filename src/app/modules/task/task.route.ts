@@ -27,6 +27,11 @@ router.patch(
   auth("admin", "director", "user", "company", "creator"),
   TaskControllers.updateTask
 );
+router.patch(
+  "/reassign/:id",
+  auth("admin", "director", "user", "company", "creator"),
+  TaskControllers.reassignTask
+);
 router.get(
   "/:id",
   auth("admin", "director", "user", "company", "creator"),
@@ -37,6 +42,16 @@ router.get(
   "/getbothuser/:authorId/:assignedId",
   auth("admin", "company", "creator", "director", "user"),
   TaskControllers.getTaskForUsers
+);
+router.get(
+  "/needtofinish/:authorId/:assignedId",
+  auth("admin", "company", "creator", "director", "user"),
+  TaskControllers.getNeedToFinishTaskForUsers
+);
+router.get(
+  "/completetask/:authorId/:assignedId",
+  auth("admin", "company", "creator", "director", "user"),
+  TaskControllers.getCompleteTaskForUsers
 );
 
 router.get(
@@ -61,6 +76,16 @@ router.get(
   "/assignedtasks/:authorId",
   auth("admin", "company", "creator", "director", "user"),
   TaskControllers.getAssignedTask
+);
+router.get(
+  "/important/:userId",
+  auth("admin", "company", "creator", "director", "user"),
+  TaskControllers.getImportantTaskByUser
+);
+router.get(
+  "/needtofinish/:authorId",
+  auth("admin", "company", "creator", "director", "user"),
+  TaskControllers.getNeedToFinishTask
 );
 
 router.get(

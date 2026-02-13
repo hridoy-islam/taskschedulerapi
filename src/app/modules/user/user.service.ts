@@ -52,113 +52,183 @@ const updateUserIntoDB = async (id: string, payload: Partial<TUser>) => {
 
 
 const getAllUserByCompany = async (userId: string) => {
-  const user = await User.findById(userId).populate('colleagues'); ;
+  const user = await User.findById(userId).populate('colleagues');
+  
   if (!user) {
     return null;
   }
 
-  const query: any = {
-    isDeleted: false,
-    _id: { $ne: userId }, // Exclude the current user
-  };
+  let usersList: any[] = [];
 
-  // Determine the user's role and set the query accordingly
+  // ============================================
+  // ADMIN / DIRECTOR - See other admins/directors + colleagues
+  // ============================================
   if (user.role === 'admin' || user.role === 'director') {
-    // Fetch users with roles 'admin' or 'director' and not deleted
-    const query = { $or: [
-      { role: { $in: ['admin', 'director'] } }, // Fetch admins and directors
-      { _id: { $in: user.colleagues || [] } }  // Include the user's colleagues
-    ], isDeleted: false };
-    let filteredUsers = await User.find(query).lean();
-  
-    // Move the current user to the top of the list
-    filteredUsers = filteredUsers.sort((a, b) => (a._id.toString() === user.id ? -1 : b._id.toString() === user.id ? 1 : 0));
-  
-    return filteredUsers;
+    const adminQuery = { 
+      $or: [
+        { role: { $in: ['admin', 'director'] } },
+        { _id: { $in: user.colleagues || [] } }
+      ], 
+      isDeleted: false,
+      _id: { $ne: userId } // Exclude self (we'll add them separately)
+    };
+    
+    usersList = await User.find(adminQuery).sort({ name: 1 }).lean();
   }
-  
 
+  // ============================================
+  // COMPANY - See creators/users in their company + colleagues
+  // ============================================
   else if (user.role === 'company') {
-    const query = { 
+    const companyQuery = { 
       company: user._id, 
-      role: { $in: ['creator', 'user'] } ,
+      role: { $in: ['creator', 'user'] },
+      isDeleted: false,
+      _id: { $ne: userId }
+    };
+    
+    usersList = await User.find(companyQuery).sort({ name: 1 }).lean();
+    
+    // Add colleagues (if not already included)
+    if (user.colleagues?.length) {
+      const colleagueIds = user.colleagues.map((c: any) => c._id || c);
+      const colleagues = await User.find({ 
+        _id: { $in: colleagueIds }, 
+        isDeleted: false 
+      }).sort({ name: 1 }).lean();
+      
+      // Only add colleagues not already in the list
+      colleagues.forEach(colleague => {
+        if (!usersList.some(u => u._id.toString() === colleague._id.toString())) {
+          usersList.push(colleague);
+        }
+      });
+    }
+  }
+
+  // ============================================
+  // CREATOR - See company owner + other creators/users + colleagues
+  // ============================================
+  else if (user.role === 'creator') {
+    const companyId = user.company;
+    
+    const creatorQuery = {
+      company: companyId,
+      isDeleted: false,
+      _id: { $ne: userId }
+    };
+    
+    usersList = await User.find(creatorQuery).sort({ name: 1 }).lean();
+    
+    // Add the company owner if exists and not deleted
+    if (companyId) {
+      const company = await User.findOne({ 
+        _id: companyId, 
+        isDeleted: false 
+      }).lean();
+      
+      if (company && !usersList.some(u => u._id.toString() === company._id.toString())) {
+        usersList.push(company);
+      }
+    }
+    
+    // Add colleagues (if not already included)
+    if (user.colleagues?.length) {
+      const colleagueIds = user.colleagues.map((c: any) => c._id || c);
+      const colleagues = await User.find({ 
+        _id: { $in: colleagueIds }, 
+        isDeleted: false 
+      }).sort({ name: 1 }).lean();
+      
+      colleagues.forEach(colleague => {
+        if (!usersList.some(u => u._id.toString() === colleague._id.toString())) {
+          usersList.push(colleague);
+        }
+      });
+    }
+  }
+
+  // ============================================
+  // USER - See only company owner + colleagues
+  // ============================================
+  else if (user.role === 'user') {
+    const colleagueIds = user.colleagues?.map((c: any) => c._id || c) || [];
+    
+    const userQuery: any = {
+      _id: { $in: colleagueIds },
       isDeleted: false
     };
-    const companyUsers = await User.find(query).lean();
-
-      // Include colleagues in the query
-      if (user.colleagues?.length) {
-        const colleagues = await User.find({ _id: { $in: user.colleagues }, isDeleted: false }).lean();
-        companyUsers.push(...colleagues);
-      }
-
-      
-    if (!companyUsers.some(existingUser => existingUser._id.toString() === user._id.toString())) {
-      companyUsers.unshift(user);  // Add the user to the list
-    }
-    return companyUsers // Return users from the same company
-  }
-
-
-  else if (user.role === 'creator') {
-    const companyId = user.company; // Get the company ID of the user
-
-    // Build the query to fetch all users with the same company ID
-    query.company = companyId;  // Only users who share the same company ID
-    query.isDeleted = false; 
-
-    // Execute the query to find users
-    const users = await User.find(query).lean();
-
-    if (companyId && !users.some(user => user._id.toString() === companyId.toString())) {
-      const company = await User.findById(companyId).lean(); // Fetch the company as a user
-      if (company && company.isDeleted === false) {
-        // Add the company to the users list if it's not deleted
-        users.unshift(company); // Insert the company at the beginning
-      }
-    }
-
-
- // Include colleagues in the query
- if (user.colleagues?.length) {
-  const colleagues = await User.find({ _id: { $in: user.colleagues }, isDeleted: false }).lean();
-  users.push(...colleagues);
-}
-
-    if (!users.some(existingUser => existingUser._id.toString() === user._id.toString())) {
-      users.unshift(user);  // Add the user to the list
-    }
-  
-    return users;
-  }
-
-
-  else if (user.role === 'user' ) {
-    // Users can only see their colleagues
-
-    const colleaguesIds = user.colleagues || [];
-    query.$or = [
-      { _id: { $in: colleaguesIds } }, // Fetch users from the colleagues array
-      // { company: user.company }, // Include users from the same company
-  
-    ];
+    
+    usersList = await User.find(userQuery).sort({ name: 1 }).lean();
+    
+    // Add company owner if exists
     if (user.company) {
-      query.$or.unshift({ _id: user.company });
+      const company = await User.findOne({ 
+        _id: user.company, 
+        isDeleted: false 
+      }).lean();
+      
+      if (company && !usersList.some(u => u._id.toString() === company._id.toString())) {
+        usersList.push(company);
+      }
     }
-    const colleagues = await User.find(query).lean(); // Fetch colleagues based on the query
-  
-      // Include the user's own ID in the list if it's not already included
-  if (!colleagues.some(existingUser => existingUser._id.toString() === user._id.toString())) {
-    colleagues.unshift(user); // Add the user to the colleagues list
   }
 
-    return colleagues; // Return only the colleagues
+  // ============================================
+  // FALLBACK - Other roles (if any)
+  // ============================================
+  else {
+    const fallbackQuery = {
+      isDeleted: false,
+      _id: { $ne: userId }
+    };
+    usersList = await User.find(fallbackQuery).sort({ name: 1 }).lean();
   }
 
+  // ============================================
+  // FINAL DEDUPLICATION & SORTING
+  // ============================================
   
-  const users = await User.find(query);
-  return users;
+  // 1. Remove any duplicates (using Map for O(n) performance)
+  const uniqueUsersMap = new Map();
+  usersList.forEach(u => {
+    if (u && u._id) {
+      uniqueUsersMap.set(u._id.toString(), u);
+    }
+  });
+  
+  let finalUsersList = Array.from(uniqueUsersMap.values());
+  
+  // 2. Add current user at the TOP
+  if (!finalUsersList.some(u => u._id.toString() === userId)) {
+    finalUsersList.unshift(user.toObject ? user.toObject() : user);
+  } else {
+    // If user is already in list, move them to top
+    finalUsersList = finalUsersList.filter(u => u._id.toString() !== userId);
+    finalUsersList.unshift(user.toObject ? user.toObject() : user);
+  }
+  
+  // 3. Sort everyone EXCEPT the first user (current user stays at top)
+  const currentUser = finalUsersList[0];
+  const otherUsers = finalUsersList.slice(1);
+  
+  otherUsers.sort((a, b) => {
+    const nameA = (a.name || '').toLowerCase();
+    const nameB = (b.name || '').toLowerCase();
+    
+    if (nameA < nameB) return -1;
+    if (nameA > nameB) return 1;
+    
+    // Tie-breaker: sort by _id for stability
+    return a._id.toString().localeCompare(b._id.toString());
+  });
+  
+  finalUsersList = [currentUser, ...otherUsers];
+  
+  return finalUsersList;
 };
+
+export default getAllUserByCompany;
 
 
 

@@ -132,7 +132,33 @@ const getSingleTaskFromDB = async (id: string) => {
 };
 
 
+const reassignTaskFromDB = async (id: string) => {
+  const result = await Task.findById(id);
 
+  if (!result) {
+    throw new AppError(httpStatus.NOT_FOUND, "Task Not Found");
+  }
+
+  if (result.assigned && result.completedBy.length > 0) {
+    result.completedBy = result.completedBy.filter(
+      (entry:any) => entry.userId.toString() !== result.assigned?.toString()
+    );
+  }
+
+  // 2. Remove the latest history entry
+  // Assuming history is added chronologically, .pop() removes the last/latest item
+  if (result.history && result.history.length > 0) {
+    result.history.pop();
+  }
+
+  // 3. Update status back to pending (implied by reassignment/reset)
+  result.status = "pending";
+
+  // 4. Save the changes
+  await result.save();
+
+  return result;
+};
 
 
 const updateTaskIntoDB = async (id: string, payload: Partial<TTask>) => {
@@ -299,7 +325,7 @@ const getTasksBoth = async (authorId: string, assignedId: string, queryParams: R
     const query = {
       $or: [
         { author: authorId, assigned: assignedId },
-        { author: assignedId, assigned: authorId },
+        // { author: assignedId, assigned: authorId },
       ],
       ...queryParams,
     };
@@ -343,8 +369,172 @@ const getTasksBoth = async (authorId: string, assignedId: string, queryParams: R
 };
 
 
+const getNeedToFinishTasks = async (authorId: string, queryParams: Record<string, any>) => {
+  // 1. Check if author exists
+  const authorExists = await User.exists({ _id: authorId });
 
+  if (!authorExists) {
+    return null;
+  }
 
+  // 2. Define the filters
+  const filters = {
+    author: authorId,
+    status: 'pending',
+    // $expr allows us to compare the 'assigned' field with the 'completedBy' array
+    $expr: {
+      $in: [
+        "$assigned", 
+        { $ifNull: ["$completedBy.userId", []] } // FIX: Ensure this always resolves to an array
+      ]
+    },
+    isDeleted: false 
+  };
+
+  // 3. Build the query
+  const taskQuery = new QueryBuilder(
+    Task.find(filters).populate("author assigned company"), 
+    queryParams
+  )
+    .search(['taskName'])
+    .filter()
+    .paginate()
+    .sort()
+    .fields();
+
+  const meta = await taskQuery.countTotal();
+  const data = await taskQuery.modelQuery;
+
+  // 4. Unread Count Logic
+  const count = await getUnreadCount({ _id: authorId });
+  const readCountMap = new Map(
+    count.map((c: any) => [c._id.toString(), c.unreadMessageCount])
+  );
+
+  const result = data.map((task: any) => {
+    const taskObj = task.toObject();
+    return {
+      ...taskObj,
+      unreadMessageCount: readCountMap.get(taskObj._id.toString()) || 0,
+    };
+  });
+
+  return {
+    meta,
+    result,
+  };
+};
+const getNeedToFinishTasksBoth = async (authorId: string, assignedId: string, queryParams: Record<string, any>) => {
+  const [authorExists, assignedExists] = await Promise.all([
+    User.exists({ _id: authorId }),
+    User.exists({ _id: assignedId }),
+  ]);
+
+  if (!authorExists || !assignedExists) {
+    return null;
+  }
+
+  // FIX: Explicitly check if the 'completedBy' array contains the 'assigned' user's ID.
+  // This matches tasks that are Pending but where the assignee has marked them as done.
+  const filters = {
+    $or: [
+      { 
+        author: authorId, 
+        assigned: assignedId,
+        "completedBy.userId": assignedId // Check if assignee is in completedBy
+      },
+      // If you enable bidirectional support later, use this:
+      // { 
+      //   author: assignedId, 
+      //   assigned: authorId, 
+      //   "completedBy.userId": authorId 
+      // }
+    ],
+    status: 'pending'
+  };
+
+  const taskQuery = new QueryBuilder(
+    Task.find(filters).populate("author assigned company"), 
+    queryParams
+  )
+    .search(['taskName'])
+    .filter()
+    .paginate()
+    .sort()
+    .fields();
+
+  const meta = await taskQuery.countTotal();
+  const data2 = await taskQuery.modelQuery;
+
+  // Unread Count Logic
+  const count = await getUnreadCount({ _id: authorId });
+  const readCountMap = new Map(
+    count.map((c: any) => [c._id.toString(), c.unreadMessageCount])
+  );
+
+  const result = data2.map((task: any) => {
+    return {
+      ...task.toObject(),
+      unreadMessageCount: readCountMap.get(task._id.toString()) || 0,
+    };
+  });
+
+  return {
+    meta,
+    result,
+  };
+};
+
+const getcompleteTasksBoth = async (authorId: string, assignedId: string, queryParams: Record<string, any>) => {
+  const [authorExists, assignedExists] = await Promise.all([
+    User.exists({ _id: authorId }),
+    User.exists({ _id: assignedId }),
+  ]);
+
+  if (!authorExists || !assignedExists) {
+    return null;
+  }
+
+  // FIX: Simple query for completed status
+  const filters = {
+    $or: [
+      { author: authorId, assigned: assignedId },
+      // { author: assignedId, assigned: authorId },
+    ],
+    status: 'completed' // Ensure this matches your Schema Enum value
+  };
+
+  const taskQuery = new QueryBuilder(
+    Task.find(filters).populate("author assigned company"), 
+    queryParams
+  )
+    .search(['taskName'])
+    .filter()
+    .paginate()
+    .sort()
+    .fields();
+
+  const meta = await taskQuery.countTotal();
+  const data2 = await taskQuery.modelQuery;
+
+  // Unread Count Logic
+  const count = await getUnreadCount({ _id: authorId });
+  const readCountMap = new Map(
+    count.map((c: any) => [c._id.toString(), c.unreadMessageCount])
+  );
+
+  const result = data2.map((task: any) => {
+    return {
+      ...task.toObject(),
+      unreadMessageCount: readCountMap.get(task._id.toString()) || 0,
+    };
+  });
+
+  return {
+    meta,
+    result,
+  };
+};
 
 
 const getDueTasksByUser = async (assignedId: string, queryParams: Record<string, any>) => {
@@ -470,6 +660,57 @@ const getUpcommingTaskByUser = async (assignedId: string, queryParams: Record<st
        unreadMessageCount: unreadCount ? unreadCount.unreadMessageCount : 0,
      };
    });
+
+  return {
+    meta,
+    result,
+  };
+};
+
+
+const getImportantTaskByUser = async (userId: string, queryParams: Record<string, any>) => {
+  const query = {
+    importantBy: userId, 
+    status: "pending",       
+    ...queryParams,          
+  };
+
+  // 2. Pass the query to your QueryBuilder
+  const taskQuery = new QueryBuilder(
+    Task.find().populate("author assigned company"),
+    query
+  )
+    .search(['taskName'])
+    .filter()             
+    .paginate() 
+    .sort() 
+    .fields(); 
+
+  const meta = await taskQuery.countTotal(); 
+  const data = await taskQuery.modelQuery; 
+
+  // 3. Fetch unread counts
+  const count = await getSingleUserUnreadCount({
+    _id: userId,
+  });
+
+  const readCount = count.map((c: any) => {
+    return {
+      _id: c._id,
+      unreadMessageCount: c.unreadMessageCount,
+    };
+  });
+
+  // 4. Map the results
+  const result = data.map((task: any) => {
+    const unreadCount = readCount.find(
+      (c: any) => c._id.toString() === task._id.toString()
+    );
+    return {
+      ...task.toObject(),
+      unreadMessageCount: unreadCount ? unreadCount.unreadMessageCount : 0,
+    };
+  });
 
   return {
     meta,
@@ -728,7 +969,12 @@ export const TaskServices = {
   updateReadComment,
   getDueTasksByUser,
   getUpcommingTaskByUser,
-  getAssignedTaskByUser,
   getTodaysTaskByUser,
-  getAllTaskForUserFromDB
+  getAllTaskForUserFromDB,
+  reassignTaskFromDB,
+  getNeedToFinishTasksBoth,
+  getcompleteTasksBoth,
+  getAssignedTaskByUser,
+  getNeedToFinishTasks,
+  getImportantTaskByUser
 };
