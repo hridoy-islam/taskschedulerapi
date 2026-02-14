@@ -167,28 +167,85 @@ const updateTaskIntoDB = async (id: string, payload: Partial<TTask>) => {
     throw new AppError(httpStatus.NOT_FOUND, "Task Not Found");
   }
 
+  // --- 1. Existing Due Date Formatting Logic ---
   if (payload.dueDate) {
     if (typeof payload.dueDate === "number") {
       const existingDueDateInDays = existingTask.dueDate
         ? Math.floor(
-            (moment(existingTask.dueDate).utc().valueOf() - moment(existingTask.createdAt).utc().valueOf()) /
+            (moment(existingTask.dueDate).utc().valueOf() -
+              moment(existingTask.createdAt).utc().valueOf()) /
               (1000 * 60 * 60 * 24)
           )
         : 0;
 
       const newDueDateInDays = existingDueDateInDays + payload.dueDate;
       const createdAt = moment(existingTask.createdAt).utc();
-      const newDueDate = createdAt.add(newDueDateInDays, 'days');
-      payload.dueDate = newDueDate.toISOString();
-    } else if (typeof payload.dueDate === "string" || payload.dueDate instanceof Date) {
-      // Parse the date as a local date first
+      const newDueDate = createdAt.add(newDueDateInDays, "days");
+      payload.dueDate = newDueDate.toISOString() as any;
+    } else if (
+      typeof payload.dueDate === "string" ||
+      payload.dueDate instanceof Date
+    ) {
       const localDate = moment(payload.dueDate).local();
-      // Then convert it to UTC
-      payload.dueDate = localDate.utc().toISOString();
+      payload.dueDate = localDate.utc().toISOString() as any;
     }
   }
 
-  const result = await Task.findByIdAndUpdate(id, payload, {
+  // We wrap the payload in $set so we can safely use $push alongside it
+  const updateQuery: any = { $set: { ...payload } };
+
+  // FIX FOR ISSUE 1: Ignore manual history updates from the frontend payload.
+  // This prevents the assignee and the author from creating duplicate history logs.
+  // We only want the backend to create a history log once during the recurring logic below.
+  if (updateQuery.$set.history) {
+    delete updateQuery.$set.history;
+  }
+
+  // --- 2. RECURRING TASK LOGIC ---
+  if (
+    payload.status === "completed" &&
+    existingTask.frequency &&
+    existingTask.frequency !== "once"
+  ) {
+    // Start from the current due date (or today if null)
+    const currentDueDate = moment(existingTask.dueDate || new Date());
+    let nextDueDate = currentDueDate.clone();
+
+    // Calculate the next due date based on the frequency
+    switch (existingTask.frequency) {
+      case "daily":
+        nextDueDate.add(1, "days");
+        break;
+      case "weekly":
+        nextDueDate.add(1, "weeks");
+        break;
+      case "monthly":
+        // Move ahead 1 month
+        nextDueDate.add(1, "months");
+        
+        // FIX FOR ISSUE 2: If the user specified a day of the month (e.g., 5),
+        // enforce that the next due date falls exactly on that day.
+        if (existingTask.scheduledDate) {
+          nextDueDate.date(existingTask.scheduledDate); 
+        }
+        break;
+    }
+
+    updateQuery.$set.status = "pending";                 
+    updateQuery.$set.dueDate = nextDueDate.toISOString();
+    updateQuery.$set.completedBy = [];                  
+
+    // This creates exactly ONE history record for the cycle
+    updateQuery.$push = {
+      history: {
+        date: new Date(),
+        completed: true,
+      },
+    };
+  }
+
+  // --- 3. Save the Updates ---
+  const result = await Task.findByIdAndUpdate(id, updateQuery, {
     new: true,
     runValidators: true,
     upsert: true,
@@ -196,7 +253,6 @@ const updateTaskIntoDB = async (id: string, payload: Partial<TTask>) => {
 
   return result;
 };
-
 // get the message count for each group
   const getUnreadCount = async (data: any) => {
     const { _id, taskId } = data;
@@ -495,13 +551,33 @@ const getcompleteTasksBoth = async (authorId: string, assignedId: string, queryP
     return null;
   }
 
-  // FIX: Simple query for completed status
+  // Get the start and end of the current day to check the history array
+  const startOfDay = moment().startOf('day').toDate();
+  const endOfDay = moment().endOf('day').toDate();
+
+  // FIX: Advanced query for completed status + recurring history
   const filters = {
-    $or: [
-      { author: authorId, assigned: assignedId },
-      // { author: assignedId, assigned: authorId },
-    ],
-    status: 'completed' // Ensure this matches your Schema Enum value
+    $and: [
+      {
+        $or: [
+          { author: authorId, assigned: assignedId },
+          // { author: assignedId, assigned: authorId }, // Uncomment if you want bidirectional
+        ],
+      },
+      {
+        $or: [
+          { status: 'completed' }, // 1. Catch standard one-time tasks that are fully completed
+          {
+            history: {
+              $elemMatch: { // 2. Catch recurring tasks that were completed TODAY
+                date: { $gte: startOfDay, $lte: endOfDay },
+                completed: true
+              }
+            }
+          }
+        ]
+      }
+    ]
   };
 
   const taskQuery = new QueryBuilder(
@@ -771,9 +847,9 @@ const getAssignedTaskByUser = async (authorId: string, queryParams: Record<strin
 }
 
 const getTodaysTaskByUser = async (userid: string) => {
-  const todayStart = moment().utc().startOf("day").toDate();
+  const todayStart = moment().startOf("day").toDate();
   // End of today in UTC
-  const todayEnd = moment().utc().endOf("day").toDate();
+  const todayEnd = moment().endOf("day").toDate();
 
   const query = {
     assigned: userid, // Filter by assigned ID
@@ -870,11 +946,11 @@ const getTasksForPlannerByWeek = async (
 
   const startDate = moment().year(yearNumber).isoWeek(weekNumber).startOf("isoWeek").toDate();
 
-  console.log(startDate);
+
 
   const endDate = moment(startDate).endOf("isoWeek").toDate();
 
-  console.log(endDate);
+  
 
   // Fetch tasks from the database
   // const tasks = await Task.find({

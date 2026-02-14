@@ -5,6 +5,8 @@ import { User } from "../user/user.model";
 import { TGroupMessage } from "./message.interface";
 import { GroupMessage } from "./message.model";
 import mongoose, { Types } from "mongoose";
+import { NotificationService } from "../notification/notification.service";
+import { getIO } from "../../../socket";
 
 interface IRequester {
   _id: string;
@@ -16,7 +18,7 @@ const createMessageIntoDB = async (payload: TGroupMessage, requester: IRequester
 
   // Ensure both IDs are ObjectId instances
   const taskObjectId = taskId;
-  const requesterObjectId =requester._id;
+  const requesterObjectId = requester._id;
 
   const task = await Group.findById(taskObjectId);
 
@@ -46,6 +48,38 @@ const createMessageIntoDB = async (payload: TGroupMessage, requester: IRequester
 
   const data = await GroupMessage.create(payload);
 
+  // ==========================================
+  // NEW LOGIC: Handle Mentions & Notifications
+  // ==========================================
+  if (payload.mentionBy && payload.mentionBy.length > 0) {
+    const notificationMessage = `${author.name} mentioned you in group "${task.groupName}"`;
+    const io = getIO();
+
+    // Create notifications for all mentioned users
+    const notifications = await Promise.all(
+      payload.mentionBy.map(async (mentionedUserId) => {
+        // Prevent sending a notification if the author somehow mentioned themselves
+        if (mentionedUserId.toString() !== authorId.toString()) {
+          return await NotificationService.createNotificationIntoDB({
+            userId: mentionedUserId, // User receiving the notification
+            senderId: author._id,    // User who sent the message
+            type: "group",           // Or "mention" depending on your enums
+            message: notificationMessage,
+            docId: task._id.toString(), // Linking to the group/task
+          });
+        }
+      })
+    );
+
+    // Send the notification in real-time using WebSocket
+    notifications.forEach((notification) => {
+      if (notification) {
+        const memberId = notification.userId.toString();
+        io.to(memberId).emit("notification", notification);
+      }
+    });
+  }
+ 
   const otherUserArr = task.members.filter(
     (member) => member._id.toString() !== authorId.toString()
   );
