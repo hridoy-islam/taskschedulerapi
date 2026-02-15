@@ -49,6 +49,33 @@ const userSchema = new Schema<TUser, UserModel>(
       type: Boolean,
       default: false,
     },
+    address2: {
+      type: String,
+    },
+    cityOrTown: {
+      type: String,
+    },
+    stateOrProvince: {
+      type: String,
+    },
+    postcode: {
+      type: String,
+    },
+    country: {
+      type: String,
+    },
+    accountNo: {
+      type: String,
+    },
+    sortCode: {
+      type: String,
+    },
+    beneficiaryName: {
+      type: String,
+    },
+    themeColor: {
+      type: String,
+    },
     address: {
       type: String,
     },
@@ -146,7 +173,7 @@ const userSchema = new Schema<TUser, UserModel>(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 userSchema.statics.hashPassword = async function (

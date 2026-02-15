@@ -68,7 +68,7 @@ const getAllTaskFromDB = async (query: Record<string, unknown>) => {
     query
   )
     .search(TaskSearchableFields)
-    .filter()
+    .filter(query)
     .sort()
     .paginate()
     .fields();
@@ -101,10 +101,10 @@ const getAllTaskForUserFromDB = async (id:string, query: Record<string, unknown>
 
   const taskQuery = new QueryBuilder(
     Task.find(filterQuery).populate("author assigned company"),
-    query
+    query,
   )
     .search(TaskSearchableFields)
-    .filter()
+    .filter(query)
     .sort()
     .fields();
 
@@ -133,126 +133,162 @@ const getSingleTaskFromDB = async (id: string) => {
 
 
 const reassignTaskFromDB = async (id: string) => {
-  const result = await Task.findById(id);
+  const task = await Task.findByIdAndUpdate(
+    id,
+    {
+      $set: {
+        status: "pending",
+        completedBy: [],
+      },
+      $pop: {
+        history: 1, // removes last item
+      },
+    },
+    { new: true },
+  );
 
-  if (!result) {
+  if (!task) {
     throw new AppError(httpStatus.NOT_FOUND, "Task Not Found");
   }
 
-  if (result.assigned && result.completedBy.length > 0) {
-    result.completedBy = result.completedBy.filter(
-      (entry:any) => entry.userId.toString() !== result.assigned?.toString()
-    );
-  }
-
-  // 2. Remove the latest history entry
-  // Assuming history is added chronologically, .pop() removes the last/latest item
-  if (result.history && result.history.length > 0) {
-    result.history.pop();
-  }
-
-  // 3. Update status back to pending (implied by reassignment/reset)
-  result.status = "pending";
-
-  // 4. Save the changes
-  await result.save();
-
-  return result;
+  return task;
 };
 
 
 const updateTaskIntoDB = async (id: string, payload: Partial<TTask>) => {
   const existingTask = await Task.findById(id);
+
   if (!existingTask) {
     throw new AppError(httpStatus.NOT_FOUND, "Task Not Found");
   }
 
-  // --- 1. Existing Due Date Formatting Logic ---
+  // ------------------------------------------------
+  // 1️⃣ Due Date Formatting
+  // ------------------------------------------------
   if (payload.dueDate) {
     if (typeof payload.dueDate === "number") {
       const existingDueDateInDays = existingTask.dueDate
         ? Math.floor(
             (moment(existingTask.dueDate).utc().valueOf() -
               moment(existingTask.createdAt).utc().valueOf()) /
-              (1000 * 60 * 60 * 24)
+              (1000 * 60 * 60 * 24),
           )
         : 0;
 
       const newDueDateInDays = existingDueDateInDays + payload.dueDate;
       const createdAt = moment(existingTask.createdAt).utc();
       const newDueDate = createdAt.add(newDueDateInDays, "days");
+
       payload.dueDate = newDueDate.toISOString() as any;
-    } else if (
-      typeof payload.dueDate === "string" ||
-      payload.dueDate instanceof Date
-    ) {
-      const localDate = moment(payload.dueDate).local();
-      payload.dueDate = localDate.utc().toISOString() as any;
+    } else {
+      payload.dueDate = moment(payload.dueDate).utc().toISOString() as any;
     }
   }
 
-  // We wrap the payload in $set so we can safely use $push alongside it
-  const updateQuery: any = { $set: { ...payload } };
+  const updateQuery: any = {
+    $set: { ...payload },
+  };
 
-  // FIX FOR ISSUE 1: Ignore manual history updates from the frontend payload.
-  // This prevents the assignee and the author from creating duplicate history logs.
-  // We only want the backend to create a history log once during the recurring logic below.
+  // Prevent manual overwrite of history
   if (updateQuery.$set.history) {
     delete updateQuery.$set.history;
   }
 
-  // --- 2. RECURRING TASK LOGIC ---
+  // ------------------------------------------------
+  // 2️⃣ AUTO ADD ASSIGNED IF AUTHOR COMPLETED
+  // ------------------------------------------------
+
+  // Get the most up-to-date array (from payload if being updated, otherwise from DB)
+  let currentCompletedBy =
+    payload.completedBy || existingTask.completedBy || [];
+
+  const authorId = existingTask.author?.toString();
+  const assignedId = existingTask.assigned?.toString();
+
+  // Only proceed if both an author and an assigned user exist
+  if (authorId && assignedId) {
+    // Check for the presence of both users
+    const isAuthorPresent = currentCompletedBy.some(
+      (entry: any) => entry.userId?.toString() === authorId,
+    );
+
+    const isAssignedPresent = currentCompletedBy.some(
+      (entry: any) => entry.userId?.toString() === assignedId,
+    );
+
+    // If author is in the array, but assigned is NOT, add assigned "no matter what"
+    if (isAuthorPresent && !isAssignedPresent) {
+      // Clone the array and append the assigned user
+      currentCompletedBy = [
+        ...currentCompletedBy,
+        { userId: existingTask.assigned },
+      ];
+
+      // Explicitly set it in updateQuery.$set to avoid $addToSet vs $set conflicts
+      updateQuery.$set.completedBy = currentCompletedBy;
+    }
+  }
+
+  // ------------------------------------------------
+  // 3️⃣ RECURRING TASK LOGIC
+  // ------------------------------------------------
+
+  const finalStatus = payload.status || existingTask.status;
+
   if (
-    payload.status === "completed" &&
+    finalStatus === "completed" &&
     existingTask.frequency &&
     existingTask.frequency !== "once"
   ) {
-    // Start from the current due date (or today if null)
     const currentDueDate = moment(existingTask.dueDate || new Date());
     let nextDueDate = currentDueDate.clone();
 
-    // Calculate the next due date based on the frequency
     switch (existingTask.frequency) {
       case "daily":
         nextDueDate.add(1, "days");
         break;
+
       case "weekly":
         nextDueDate.add(1, "weeks");
         break;
+
       case "monthly":
-        // Move ahead 1 month
         nextDueDate.add(1, "months");
-        
-        // FIX FOR ISSUE 2: If the user specified a day of the month (e.g., 5),
-        // enforce that the next due date falls exactly on that day.
         if (existingTask.scheduledDate) {
-          nextDueDate.date(existingTask.scheduledDate); 
+          nextDueDate.date(existingTask.scheduledDate);
         }
         break;
     }
 
-    updateQuery.$set.status = "pending";                 
-    updateQuery.$set.dueDate = nextDueDate.toISOString();
-    updateQuery.$set.completedBy = [];                  
-
-    // This creates exactly ONE history record for the cycle
     updateQuery.$push = {
+      ...(updateQuery.$push || {}),
       history: {
         date: new Date(),
         completed: true,
       },
     };
+
+    updateQuery.$set.status = "pending";
+    updateQuery.$set.dueDate = nextDueDate.toISOString();
+
+    // reset for next cycle
+    updateQuery.$set.completedBy = [];
   }
 
-  // --- 3. Save the Updates ---
+  // ------------------------------------------------
+  // 4️⃣ FINAL UPDATE
+  // ------------------------------------------------
+
   const result = await Task.findByIdAndUpdate(id, updateQuery, {
     new: true,
     runValidators: true,
-    upsert: true,
   });
 
   return result;
 };
+
+
+
 // get the message count for each group
   const getUnreadCount = async (data: any) => {
     const { _id, taskId } = data;
@@ -389,10 +425,10 @@ const getTasksBoth = async (authorId: string, assignedId: string, queryParams: R
   // Use the QueryBuilder to build the query
   const taskQuery = new QueryBuilder(
     Task.find().populate("author assigned company"), // Apply the query here
-    query
+    query,
   )
-    .search(['taskName']) // Optionally search by task name
-    .filter() // Apply any additional filters from queryParams
+    .search(["taskName"]) // Optionally search by task name
+    .filter(query) // Apply any additional filters from queryParams
     .paginate() // Handle pagination
     .sort() // Apply sorting (if needed)
     .fields(); // Include any specific fields required
@@ -449,11 +485,11 @@ const getNeedToFinishTasks = async (authorId: string, queryParams: Record<string
 
   // 3. Build the query
   const taskQuery = new QueryBuilder(
-    Task.find(filters).populate("author assigned company"), 
-    queryParams
+    Task.find(filters).populate("author assigned company"),
+    queryParams,
   )
-    .search(['taskName'])
-    .filter()
+    .search(["taskName"])
+    .filter(queryParams)
     .paginate()
     .sort()
     .fields();
@@ -510,11 +546,11 @@ const getNeedToFinishTasksBoth = async (authorId: string, assignedId: string, qu
   };
 
   const taskQuery = new QueryBuilder(
-    Task.find(filters).populate("author assigned company"), 
-    queryParams
+    Task.find(filters).populate("author assigned company"),
+    queryParams,
   )
-    .search(['taskName'])
-    .filter()
+    .search(["taskName"])
+    .filter(queryParams)
     .paginate()
     .sort()
     .fields();
@@ -561,31 +597,30 @@ const getcompleteTasksBoth = async (authorId: string, assignedId: string, queryP
       {
         $or: [
           { author: authorId, assigned: assignedId },
-          // { author: assignedId, assigned: authorId }, // Uncomment if you want bidirectional
+          { author: assignedId, assigned: authorId },
         ],
       },
       {
         $or: [
-          { status: 'completed' }, // 1. Catch standard one-time tasks that are fully completed
+          { status: "completed" }, // 1. Catch standard one-time tasks that are fully completed
           {
             history: {
-              $elemMatch: { // 2. Catch recurring tasks that were completed TODAY
-                date: { $gte: startOfDay, $lte: endOfDay },
-                completed: true
-              }
-            }
-          }
-        ]
-      }
-    ]
+              $elemMatch: {
+                completed: true,
+              },
+            },
+          },
+        ],
+      },
+    ],
   };
 
   const taskQuery = new QueryBuilder(
-    Task.find(filters).populate("author assigned company"), 
-    queryParams
+    Task.find(filters).populate("author assigned company"),
+    queryParams,
   )
-    .search(['taskName'])
-    .filter()
+    .search(["taskName"])
+    .filter(queryParams)
     .paginate()
     .sort()
     .fields();
@@ -649,10 +684,10 @@ const getDueTasksByUser = async (assignedId: string, queryParams: Record<string,
   // Use the QueryBuilder to build the query
   const taskQuery = new QueryBuilder(
     Task.find().populate("author assigned company"),
-    query
+    query,
   )
-    .search(['taskName'])
-    .filter() // Apply filters (this will automatically apply the provided `query` object)
+    .search(["taskName"])
+    .filter(queryParams) // Apply filters (this will automatically apply the provided `query` object)
     .paginate() // Handle pagination if necessary
     .sort() // You can define a sort order as needed
     .fields(); // Include any specific fields you need
@@ -706,10 +741,10 @@ const getUpcommingTaskByUser = async (assignedId: string, queryParams: Record<st
   // Use the QueryBuilder to build the query
   const taskQuery = new QueryBuilder(
     Task.find().populate("author assigned company"),
-    query
+    query,
   )
-    .search(['taskName'])
-    .filter() // Apply filters (this will automatically apply the provided `query` object)
+    .search(["taskName"])
+    .filter(queryParams) // Apply filters (this will automatically apply the provided `query` object)
     .paginate() // Handle pagination if necessary
     .sort() // You can define a sort order as needed
     .fields(); // Include any specific fields you need
@@ -754,12 +789,12 @@ const getImportantTaskByUser = async (userId: string, queryParams: Record<string
   // 2. Pass the query to your QueryBuilder
   const taskQuery = new QueryBuilder(
     Task.find().populate("author assigned company"),
-    query
+    query,
   )
-    .search(['taskName'])
-    .filter()             
-    .paginate() 
-    .sort() 
+    .search(["taskName"])
+    .filter(queryParams)
+    .paginate()
+    .sort()
     .fields(); 
 
   const meta = await taskQuery.countTotal(); 
@@ -808,10 +843,10 @@ const getAssignedTaskByUser = async (authorId: string, queryParams: Record<strin
   // Use the QueryBuilder to build the query
   const taskQuery = new QueryBuilder(
     Task.find().populate("author assigned company"),
-    query
+    query,
   )
-    .search(['taskName'])
-    .filter() // Apply filters (this will automatically apply the provided `query` object)
+    .search(["taskName"])
+    .filter(queryParams) // Apply filters (this will automatically apply the provided `query` object)
     .paginate() // Handle pagination if necessary
     .sort() // You can define a sort order as needed
     .fields(); // Include any specific fields you need

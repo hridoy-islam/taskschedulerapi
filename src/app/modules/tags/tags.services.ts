@@ -12,7 +12,7 @@ const createTagsIntoDB = async (payload: TTags) => {
 const getAllTagsFromDB = async (query: Record<string, unknown>) => {
   const noteQuery = new QueryBuilder(Tag.find().populate("author"), query)
     .search(TagsSearchableFields)
-    .filter()
+    .filter(query)
     .sort()
     .paginate()
     .fields();
@@ -34,13 +34,13 @@ const getAllTagsForUserFromDB = async (userId: string, query: Record<string, unk
 
   const tagQuery = new QueryBuilder(
     Tag.find({ author: userId }).populate({
-      path: 'author',
-      select: 'name email' // Only select necessary fields
+      path: "author",
+      select: "name email", // Only select necessary fields
     }),
-    query
+    query,
   )
     .search(TagsSearchableFields)
-    .filter()
+    .filter(query)
     .sort()
     .paginate()
     .fields();

@@ -58,7 +58,7 @@ const createNoteIntoDB = async (payload:TNote) => {
 const getAllNoteFromDB = async (query: Record<string, unknown>) => {
   const noteQuery = new QueryBuilder(Note.find().populate("author").populate("tags"), query)
     .search(NoteSearchableFields)
-    .filter()
+    .filter(query)
     .sort()
     .paginate()
     .fields();
@@ -89,7 +89,7 @@ const getNoteByUserIdFromDB = async (authorId: string, query: Record<string, unk
       query
     )
       .search(NoteSearchableFields)
-      .filter()
+      .filter(query)
       .sort()
       .paginate()
       .fields();
@@ -121,11 +121,14 @@ const getNoteByUserIdFromDB = async (authorId: string, query: Record<string, unk
 
 const getNoteByIdFromDB= async (noteId: string, query: Record<string, unknown>) => {
   try {
-    const noteQuery = new QueryBuilder(Note.find({ _id:noteId }).populate("author").populate("tags"),query)
-      .search(NoteSearchableFields)  // Apply search logic based on NoteSearchableFields
-      .filter()                     // Apply filter conditions
-      .sort()                        // Apply sorting
-      .paginate()                    // Apply pagination
+    const noteQuery = new QueryBuilder(
+      Note.find({ _id: noteId }).populate("author").populate("tags"),
+      query,
+    )
+      .search(NoteSearchableFields) // Apply search logic based on NoteSearchableFields
+      .filter(query) // Apply filter conditions
+      .sort() // Apply sorting
+      .paginate() // Apply pagination
       .fields();                     // Select specific fields if needed
 
     // Count total documents based on the query
@@ -151,13 +154,13 @@ const getSharedNoteByIdFromDB = async (userId: string, query: Record<string, unk
 
     // Build query to search notes where userId is present in 'sharedWith' array
     const noteQuery = new QueryBuilder(
-      Note.find({ sharedWith: { $in: [userIdObj] } })  , 
-      query
+      Note.find({ sharedWith: { $in: [userIdObj] } }),
+      query,
     )
-      .search(NoteSearchableFields)  // Apply search logic based on NoteSearchableFields
-      .filter()                     // Apply filter conditions
-      .sort()                        // Apply sorting
-      .paginate()                    // Apply pagination
+      .search(NoteSearchableFields) // Apply search logic based on NoteSearchableFields
+      .filter(query) // Apply filter conditions
+      .sort() // Apply sorting
+      .paginate() // Apply pagination
       .fields();                     // Select specific fields if needed
 
     // Count total documents based on the query

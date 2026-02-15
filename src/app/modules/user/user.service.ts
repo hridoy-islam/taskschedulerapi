@@ -8,7 +8,7 @@ import AppError from "../../errors/AppError";
 const getAllUserFromDB = async (query: Record<string, unknown>) => {
   const userQuery = new QueryBuilder(User.find().populate("company"), query)
     .search(UserSearchableFields)
-    .filter()
+    .filter(query)
     .sort()
     .paginate()
     .fields();
@@ -52,123 +52,76 @@ const updateUserIntoDB = async (id: string, payload: Partial<TUser>) => {
 
 
 const getAllUserByCompany = async (userId: string) => {
-  // 1. Fetch user using .lean() and WITHOUT populate. 
-  // This keeps the JSON clean and prevents bloated nested objects.
+  // 1. Fetch user using .lean() without populate
   const user = await User.findById(userId).lean();
-  
+
   if (!user) {
     return null;
   }
 
-  let usersList: any[] = [];
   const colleagueIds = user.colleagues || [];
 
-  // ============================================
-  // ADMIN / DIRECTOR
-  // ============================================
-  if (user.role === 'admin' || user.role === 'director') {
-    const adminQuery = { 
-      $or: [
-        { role: { $in: ['admin', 'director'] } },
-        { _id: { $in: colleagueIds } }
-      ], 
-      isDeleted: false,
-      _id: { $ne: userId } 
-    };
-    usersList = await User.find(adminQuery).lean();
-  }
+  // 2. Base Query: Exclude self and deleted users
+  const query: any = {
+    isDeleted: false,
+    _id: { $ne: userId },
+  };
 
-  // ============================================
-  // COMPANY
-  // ============================================
-  else if (user.role === 'company') {
-    const companyQuery = { 
-      $or: [
-        { company: user._id, role: { $in: ['creator', 'user'] } },
-        { _id: { $in: colleagueIds } }
-      ],
-      isDeleted: false,
-      _id: { $ne: userId }
-    };
-    usersList = await User.find(companyQuery).lean();
-  }
+  // 3. Define the $or conditions.
+  // Putting colleagues here guarantees EVERY role sees their colleagues, regardless of company.
+  const orConditions: any[] = [{ _id: { $in: colleagueIds } }];
 
-  // ============================================
-  // CREATOR
-  // ============================================
-  else if (user.role === 'creator') {
-    const creatorQuery = {
-      $or: [
-        { company: user.company },     // Co-workers in same company
-        { _id: { $in: colleagueIds } } // Colleagues
-      ],
-      isDeleted: false,
-      _id: { $ne: userId }
-    };
-
-    // Add company owner to the query if a company ID exists
-    if (user.company) {
-      creatorQuery.$or.push({ _id: user.company } as any);
-    }
-    
-    usersList = await User.find(creatorQuery).lean();
+  // 4. Dynamically append role-specific logic to the $or array
+  if (user.role === "admin" || user.role === "director") {
+    orConditions.push({ role: { $in: ["admin", "director"] } });
+    query.$or = orConditions;
+  } else if (user.role === "company") {
+    orConditions.push({
+      company: user._id,
+      role: { $in: ["creator", "user"] },
+    });
+    query.$or = orConditions;
+  } else if (user.role === "creator") {
+    orConditions.push({ company: user.company }); // Co-workers
+    if (user.company) orConditions.push({ _id: user.company }); // Company owner
+    query.$or = orConditions;
+  } else if (user.role === "user") {
+    if (user.company) orConditions.push({ _id: user.company }); // Company owner
+    query.$or = orConditions;
   }
+  // Note: For the "fallback" role, we don't attach the $or condition.
+  // It will simply use the base query and fetch everyone.
 
-  // ============================================
-  // USER
-  // ============================================
-  else if (user.role === 'user') {
-    const userQuery = {
-      $or: [
-        { _id: { $in: colleagueIds } } // Colleagues
-      ],
-      isDeleted: false,
-      _id: { $ne: userId }
-    };
-    
-    // Add company owner to the query if a company ID exists
-    if (user.company) {
-      userQuery.$or.push({ _id: user.company } as any);
-    }
-    
-    usersList = await User.find(userQuery).lean();
-  }
-
-  // ============================================
-  // FALLBACK
-  // ============================================
-  else {
-    usersList = await User.find({ isDeleted: false, _id: { $ne: userId } }).lean();
-  }
+  // 5. Execute a SINGLE database call
+  const usersList = await User.find(query).lean();
 
   // ============================================
   // FINAL DEDUPLICATION & SORTING
   // ============================================
-  
-  // 1. Remove any duplicates (using Map for O(n) performance)
+
+  // Remove duplicates using Map for O(n) performance
   const uniqueUsersMap = new Map();
-  usersList.forEach(u => {
+  usersList.forEach((u) => {
     if (u && u._id) {
       uniqueUsersMap.set(u._id.toString(), u);
     }
   });
-  
+
   let finalUsersList = Array.from(uniqueUsersMap.values());
-  
-  // 2. Sort everyone alphabetically by name
+
+  // Sort everyone alphabetically by name
   finalUsersList.sort((a, b) => {
-    const nameA = (a.name || '').toLowerCase();
-    const nameB = (b.name || '').toLowerCase();
-    
+    const nameA = (a.name || "").toLowerCase();
+    const nameB = (b.name || "").toLowerCase();
+
     if (nameA < nameB) return -1;
     if (nameA > nameB) return 1;
     return a._id.toString().localeCompare(b._id.toString());
   });
-  
-  // 3. Add current user at the TOP
-  // Because we used .lean() at the top, this will be clean without bloated arrays
+
+  // Add current user at the TOP
   finalUsersList.unshift(user);
-  
+
   return finalUsersList;
 };
 

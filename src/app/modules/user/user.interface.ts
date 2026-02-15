@@ -41,15 +41,25 @@ export interface TUser {
   role: "user" | "admin" | "company" | "creator" | "director";
   status: "block" | "active";
   company?: Types.ObjectId;
-  colleagues?: Types.ObjectId[]; 
+  colleagues?: Types.ObjectId[];
   isDeleted: boolean;
   authorized: boolean;
-  
+
   address?: string;
-  image?: string; 
+  address2?: string;
+  cityOrTown?: string;
+  stateOrProvince?: string;
+  postcode?: string;
+  country?: string;
+  accountNo?: string;
+  sortCode?: string;
+  beneficiaryName?: string;
+  themeColor?: string;
+  
+  image?: string;
   phone?: string;
   jobTitle?: string;
-  bio?: string;     
+  bio?: string;
   socialLinks?: string[];
   companyType?: string;
   companyWebsite?: string;

@@ -90,7 +90,7 @@ const getAllGroupFromDB = async (query: Record<string, unknown>, requester: any)
     query
   )
     .search(GroupSearchableFields)
-    .filter()
+    .filter(query)
     .sort()
     .paginate()
     .fields();

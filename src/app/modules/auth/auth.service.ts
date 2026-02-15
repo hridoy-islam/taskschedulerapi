@@ -50,6 +50,16 @@ const normalizedEmail = payload.email.toLowerCase();
       throw new AppError(httpStatus.FORBIDDEN, "Password does not match");
     }
 
+    if (
+      (foundUser.role === "creator" || foundUser.role === "user") &&
+      !foundUser.company
+    ) {
+      throw new AppError(
+        httpStatus.FORBIDDEN,
+        "You are not assigned to any company. Please contact admin.",
+      );
+    }
+
     // Get the client's IP address
     const ipAddress = requestIp.getClientIp(req);
     if (!ipAddress) {
