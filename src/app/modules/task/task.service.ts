@@ -614,7 +614,9 @@ const getcompleteTasksBoth = async (
                 completed: true,
               },
             },
-          },
+          },{
+            "completedBy.userId": authorId
+          }
         ],
       },
     ],
