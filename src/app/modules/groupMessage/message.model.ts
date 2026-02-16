@@ -33,6 +33,11 @@ const GroupMessageSchema = new Schema<TGroupMessage>(
         ref: "User",
       },
     ],
+    replyTo: {
+      type: Schema.Types.ObjectId,
+      ref: "GroupMessage",
+      default: null,
+    },
   },
   {
     timestamps: true,

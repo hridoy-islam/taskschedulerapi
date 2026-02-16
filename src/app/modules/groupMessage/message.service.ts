@@ -151,22 +151,25 @@ const getMessagesFromDB = async (id: string, page: number, limit: number, reques
 
 const updateMessageFromDB = async (
   messageId: string,
-  updatedContent: { content?: string; isFile?: boolean },
-  requester: any
+  updatedData: {
+    content?: string;
+    isFile?: boolean;
+    mentionBy?: string[];
+  },
+  requester: string
 ) => {
-  // Find the message by ID
   const message = await GroupMessage.findById(messageId);
+
   if (!message) {
     throw new AppError(httpStatus.NOT_FOUND, "Message not found");
   }
-console.log(message.authorId)
-if (!message.authorId.equals(requester)) {
-  throw new AppError(
-    httpStatus.FORBIDDEN,
-    "You are not authorized to update this message"
-  );
-}
 
+  if (!message.authorId.equals(requester)) {
+    throw new AppError(
+      httpStatus.FORBIDDEN,
+      "You are not authorized to update this message"
+    );
+  }
 
   const group = await Group.findById(message.taskId);
   if (!group) {
@@ -180,18 +183,73 @@ if (!message.authorId.equals(requester)) {
     );
   }
 
-  // Update the content and/or isFile fields
-  if (updatedContent.content !== undefined) {
-    message.content = updatedContent.content;
+  // ===============================
+  // Detect New Mentions
+  // ===============================
+  let newMentionedUsers: string[] = [];
+
+  if (updatedData.mentionBy) {
+    const previousMentions = (message.mentionBy || []).map(id => id.toString());
+
+    const updatedMentions = updatedData.mentionBy;
+
+    newMentionedUsers = updatedMentions.filter(
+      (id) => !previousMentions.includes(id)
+    );
+
+    // Update mentionBy
+    message.mentionBy = updatedMentions as any;
   }
 
-  if (updatedContent.isFile !== undefined) {
-    message.isFile = updatedContent.isFile;
+  // ===============================
+  // Update Content
+  // ===============================
+  if (updatedData.content !== undefined) {
+    message.content = updatedData.content;
+  }
+
+  if (updatedData.isFile !== undefined) {
+    message.isFile = updatedData.isFile;
   }
 
   await message.save();
+
+  // ===============================
+  // Create Notifications for NEW mentions
+  // ===============================
+  if (newMentionedUsers.length > 0) {
+    const author = await User.findById(message.authorId);
+    const io = getIO();
+
+    const notificationMessage = `${author?.name} mentioned you in group "${group.groupName}"`;
+
+    const notifications = await Promise.all(
+      newMentionedUsers.map(async (userId) => {
+        if (userId !== message.authorId.toString()) {
+          return await NotificationService.createNotificationIntoDB({
+            userId: new Types.ObjectId(userId),
+            senderId: message.authorId,
+            type: "group",
+            message: notificationMessage,
+            docId: group._id.toString(),
+          });
+        }
+      })
+    );
+
+    notifications.forEach((notification) => {
+      if (notification) {
+        io.to(notification.userId.toString()).emit(
+          "notification",
+          notification
+        );
+      }
+    });
+  }
+
   return message;
 };
+
 
 
 
