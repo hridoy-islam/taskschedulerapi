@@ -154,8 +154,12 @@ const getSharedNoteByIdFromDB = async (userId: string, query: Record<string, unk
 
     // Build query to search notes where userId is present in 'sharedWith' array
     const noteQuery = new QueryBuilder(
-      Note.find({ sharedWith: { $in: [userIdObj] } }),
-      query,
+      Note.find({ sharedWith: { $in: [userIdObj] } })
+        .populate({
+          path: "author",
+          select: "name", 
+        }),
+      query
     )
       .search(NoteSearchableFields) // Apply search logic based on NoteSearchableFields
       .filter(query) // Apply filter conditions

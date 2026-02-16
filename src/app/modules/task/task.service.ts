@@ -41,8 +41,6 @@ const createTaskIntoDB = async (payload: TTask) => {
 
   const result = await Task.create(payload);
 
-   
-  
   if (author._id.toString() !== assigned._id.toString()) {
     const notification = await NotificationService.createNotificationIntoDB({
       userId: assigned._id, // User receiving the notification
@@ -50,7 +48,6 @@ const createTaskIntoDB = async (payload: TTask) => {
       type: "task",
       message: `${author.name} assigned a new task "${result.taskName}"`,
       docId: result._id.toString(),
-
     });
 
     // Step 3: Send the notification in real-time using WebSocket
@@ -65,7 +62,7 @@ const createTaskIntoDB = async (payload: TTask) => {
 const getAllTaskFromDB = async (query: Record<string, unknown>) => {
   const taskQuery = new QueryBuilder(
     Task.find().populate("author assigned company"),
-    query
+    query,
   )
     .search(TaskSearchableFields)
     .filter(query)
@@ -82,12 +79,12 @@ const getAllTaskFromDB = async (query: Record<string, unknown>) => {
   };
 };
 
-
-
-
-const getAllTaskForUserFromDB = async (id:string, query: Record<string, unknown>) => {
+const getAllTaskForUserFromDB = async (
+  id: string,
+  query: Record<string, unknown>,
+) => {
   if (!mongoose.Types.ObjectId.isValid(id)) {
-    throw new Error('Invalid user ID');
+    throw new Error("Invalid user ID");
   }
 
   const filterQuery = {
@@ -97,8 +94,6 @@ const getAllTaskForUserFromDB = async (id:string, query: Record<string, unknown>
     ],
   };
 
-
-
   const taskQuery = new QueryBuilder(
     Task.find(filterQuery).populate("author assigned company"),
     query,
@@ -106,6 +101,7 @@ const getAllTaskForUserFromDB = async (id:string, query: Record<string, unknown>
     .search(TaskSearchableFields)
     .filter(query)
     .sort()
+    .paginate()
     .fields();
 
   const meta = await taskQuery.countTotal();
@@ -120,17 +116,16 @@ const getAllTaskForUserFromDB = async (id:string, query: Record<string, unknown>
 const getSingleTaskFromDB = async (id: string) => {
   const result = await Task.findById(id)
     .populate({
-      path: 'author',
-      select: 'name image'
+      path: "author",
+      select: "name image",
     })
     .populate({
-      path: 'assigned',
-      select: 'name image'
+      path: "assigned",
+      select: "name image",
     });
 
   return result;
 };
-
 
 const reassignTaskFromDB = async (id: string) => {
   const task = await Task.findByIdAndUpdate(
@@ -153,7 +148,6 @@ const reassignTaskFromDB = async (id: string) => {
 
   return task;
 };
-
 
 const updateTaskIntoDB = async (id: string, payload: Partial<TTask>) => {
   const existingTask = await Task.findById(id);
@@ -287,122 +281,123 @@ const updateTaskIntoDB = async (id: string, payload: Partial<TTask>) => {
   return result;
 };
 
-
-
 // get the message count for each group
-  const getUnreadCount = async (data: any) => {
-    const { _id, taskId } = data;
-    const user = await User.findById(_id);
-    if (!user) {
-      throw new AppError(httpStatus.NOT_FOUND, "User not found");
-    }
-    // console.log(`User found: ${user}`);
+const getUnreadCount = async (data: any) => {
+  const { _id, taskId } = data;
+  const user = await User.findById(_id);
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, "User not found");
+  }
+  // console.log(`User found: ${user}`);
 
-    // Ensure `user._id` is of type `ObjectId`
-    const userObjectId = mongoose.Types.ObjectId.isValid(_id)
-      ? new mongoose.Types.ObjectId(_id)
-      : null;
-    const taskObjectId = mongoose.Types.ObjectId.isValid(_id)
-      ? new mongoose.Types.ObjectId(taskId)
-      : null;
+  // Ensure `user._id` is of type `ObjectId`
+  const userObjectId = mongoose.Types.ObjectId.isValid(_id)
+    ? new mongoose.Types.ObjectId(_id)
+    : null;
+  const taskObjectId = mongoose.Types.ObjectId.isValid(_id)
+    ? new mongoose.Types.ObjectId(taskId)
+    : null;
 
-    if (!userObjectId) {
-      throw new AppError(httpStatus.BAD_REQUEST, "Invalid User ID format");
-    }
+  if (!userObjectId) {
+    throw new AppError(httpStatus.BAD_REQUEST, "Invalid User ID format");
+  }
 
-    // Fetch tasks where the user is a member
-    // const tasks = await Task.find({
-    //   // "lastSeen.userId": userObjectId,
-    //   _id: taskObjectId,
-    // });
-    const tasks = await Task.find({
-      $or: [
-        { author: userObjectId, assigned: taskObjectId },
-        { assigned: userObjectId, author: taskObjectId },
-      ],
+  // Fetch tasks where the user is a member
+  // const tasks = await Task.find({
+  //   // "lastSeen.userId": userObjectId,
+  //   _id: taskObjectId,
+  // });
+  const tasks = await Task.find({
+    $or: [
+      { author: userObjectId, assigned: taskObjectId },
+      { assigned: userObjectId, author: taskObjectId },
+    ],
+  });
+
+  const groupWithMessageCount = await Promise.all(
+    tasks.map(async (task: any) => {
+      const member = task.lastSeen.find(
+        (m: any) => m.userId.toString() === userObjectId.toString(),
+      );
+      const lastMessageReadId = member ? member.lastSeenId : null;
+
+      const unreadMessageCount = await Comment.countDocuments({
+        taskId: task._id,
+        ...(lastMessageReadId !== null
+          ? { _id: { $gt: lastMessageReadId } }
+          : {}),
+      });
+
+      return {
+        ...task.toObject(),
+        unreadMessageCount,
+      };
+    }),
+  );
+  return groupWithMessageCount;
+};
+
+const getSingleUserUnreadCount = async (data: any) => {
+  const { _id, type } = data;
+  const user = await User.findById(_id);
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, "User not found");
+  }
+  // console.log(`User found: ${user}`);
+
+  // Ensure `user._id` is of type `ObjectId`
+  const userObjectId = mongoose.Types.ObjectId.isValid(_id)
+    ? new mongoose.Types.ObjectId(_id)
+    : null;
+
+  if (!userObjectId) {
+    throw new AppError(httpStatus.BAD_REQUEST, "Invalid User ID format");
+  }
+
+  // Fetch tasks where the user is a member
+  // const tasks = await Task.find({
+  //   // "lastSeen.userId": userObjectId,
+  //   _id: taskObjectId,
+  // });
+  let tasks;
+  if (type === "author") {
+    tasks = await Task.find({
+      $or: [{ author: userObjectId }],
     });
+  } else {
+    tasks = await Task.find({
+      $or: [{ assigned: userObjectId }],
+    });
+  }
 
+  const groupWithMessageCount = await Promise.all(
+    tasks.map(async (task: any) => {
+      const member = task.lastSeen.find(
+        (m: any) => m.userId.toString() === userObjectId.toString(),
+      );
+      const lastMessageReadId = member ? member.lastSeenId : null;
 
-    const groupWithMessageCount = await Promise.all(
-      tasks.map(async (task: any) => {
-        const member = task.lastSeen.find(
-          (m: any) => m.userId.toString() === userObjectId.toString()
-        );
-        const lastMessageReadId = member ? member.lastSeenId : null;
-
-        const unreadMessageCount = await Comment.countDocuments({
-          taskId: task._id,
-          ...(lastMessageReadId !== null
-            ? { _id: { $gt: lastMessageReadId } } 
-            : {}), 
-        });
-
-        return {
-          ...task.toObject(),
-          unreadMessageCount,
-        };
-      })
-    );
-    return groupWithMessageCount;
-  };
-
-  const getSingleUserUnreadCount = async (data: any) => {
-    const { _id, type } = data;
-    const user = await User.findById(_id);
-    if (!user) {
-      throw new AppError(httpStatus.NOT_FOUND, "User not found");
-    }
-    // console.log(`User found: ${user}`);
-
-    // Ensure `user._id` is of type `ObjectId`
-    const userObjectId = mongoose.Types.ObjectId.isValid(_id)
-      ? new mongoose.Types.ObjectId(_id)
-      : null;
-
-    if (!userObjectId) {
-      throw new AppError(httpStatus.BAD_REQUEST, "Invalid User ID format");
-    }
-
-    // Fetch tasks where the user is a member
-    // const tasks = await Task.find({
-    //   // "lastSeen.userId": userObjectId,
-    //   _id: taskObjectId,
-    // });
-    let tasks;
-    if (type === "author") {
-      tasks = await Task.find({
-        $or: [{ author: userObjectId }],
+      const unreadMessageCount = await Comment.countDocuments({
+        taskId: task._id,
+        ...(lastMessageReadId !== null
+          ? { _id: { $gt: lastMessageReadId } } // Count messages after the last read ID
+          : {}), // Count all messages if lastMessageReadId is null
       });
-    } else {
-      tasks = await Task.find({
-        $or: [{ assigned: userObjectId }],
-      });
-    }
 
-    const groupWithMessageCount = await Promise.all(
-      tasks.map(async (task: any) => {
-        const member = task.lastSeen.find(
-          (m: any) => m.userId.toString() === userObjectId.toString()
-        );
-        const lastMessageReadId = member ? member.lastSeenId : null;
+      return {
+        ...task.toObject(),
+        unreadMessageCount,
+      };
+    }),
+  );
+  return groupWithMessageCount;
+};
 
-        const unreadMessageCount = await Comment.countDocuments({
-          taskId: task._id,
-          ...(lastMessageReadId !== null
-            ? { _id: { $gt: lastMessageReadId } } // Count messages after the last read ID
-            : {}), // Count all messages if lastMessageReadId is null
-        });
-
-        return {
-          ...task.toObject(),
-          unreadMessageCount,
-        };
-      })
-    );
-    return groupWithMessageCount;
-  };
-
-const getTasksBoth = async (authorId: string, assignedId: string, queryParams: Record<string, any>) => {
+const getTasksBoth = async (
+  authorId: string,
+  assignedId: string,
+  queryParams: Record<string, any>,
+) => {
   const [authorExists, assignedExists] = await Promise.all([
     User.exists({ _id: authorId }),
     User.exists({ _id: assignedId }),
@@ -413,14 +408,14 @@ const getTasksBoth = async (authorId: string, assignedId: string, queryParams: R
     return null;
   }
 
-    // Define the query filters
-    const query = {
-      $or: [
-        { author: authorId, assigned: assignedId },
-        // { author: assignedId, assigned: authorId },
-      ],
-      ...queryParams,
-    };
+  // Define the query filters
+  const query = {
+    $or: [
+      { author: authorId, assigned: assignedId },
+      // { author: assignedId, assigned: authorId },
+    ],
+    ...queryParams,
+  };
 
   // Use the QueryBuilder to build the query
   const taskQuery = new QueryBuilder(
@@ -442,26 +437,28 @@ const getTasksBoth = async (authorId: string, assignedId: string, queryParams: R
       _id: c._id,
       unreadMessageCount: c.unreadMessageCount,
     };
-  }
-  );
+  });
 
   const data2 = await taskQuery.modelQuery;
   const result = data2.map((task: any) => {
-    const unreadCount = readCount.find((c: any) => c._id.toString() === task._id.toString());
+    const unreadCount = readCount.find(
+      (c: any) => c._id.toString() === task._id.toString(),
+    );
     return {
       ...task.toObject(),
       unreadMessageCount: unreadCount ? unreadCount.unreadMessageCount : 0,
     };
-  }
-  );
+  });
   return {
     meta,
     result,
   };
 };
 
-
-const getNeedToFinishTasks = async (authorId: string, queryParams: Record<string, any>) => {
+const getNeedToFinishTasks = async (
+  authorId: string,
+  queryParams: Record<string, any>,
+) => {
   // 1. Check if author exists
   const authorExists = await User.exists({ _id: authorId });
 
@@ -472,15 +469,15 @@ const getNeedToFinishTasks = async (authorId: string, queryParams: Record<string
   // 2. Define the filters
   const filters = {
     author: authorId,
-    status: 'pending',
+    status: "pending",
     // $expr allows us to compare the 'assigned' field with the 'completedBy' array
     $expr: {
       $in: [
-        "$assigned", 
-        { $ifNull: ["$completedBy.userId", []] } // FIX: Ensure this always resolves to an array
-      ]
+        "$assigned",
+        { $ifNull: ["$completedBy.userId", []] }, // FIX: Ensure this always resolves to an array
+      ],
     },
-    isDeleted: false 
+    isDeleted: false,
   };
 
   // 3. Build the query
@@ -500,7 +497,7 @@ const getNeedToFinishTasks = async (authorId: string, queryParams: Record<string
   // 4. Unread Count Logic
   const count = await getUnreadCount({ _id: authorId });
   const readCountMap = new Map(
-    count.map((c: any) => [c._id.toString(), c.unreadMessageCount])
+    count.map((c: any) => [c._id.toString(), c.unreadMessageCount]),
   );
 
   const result = data.map((task: any) => {
@@ -516,7 +513,11 @@ const getNeedToFinishTasks = async (authorId: string, queryParams: Record<string
     result,
   };
 };
-const getNeedToFinishTasksBoth = async (authorId: string, assignedId: string, queryParams: Record<string, any>) => {
+const getNeedToFinishTasksBoth = async (
+  authorId: string,
+  assignedId: string,
+  queryParams: Record<string, any>,
+) => {
   const [authorExists, assignedExists] = await Promise.all([
     User.exists({ _id: authorId }),
     User.exists({ _id: assignedId }),
@@ -530,19 +531,19 @@ const getNeedToFinishTasksBoth = async (authorId: string, assignedId: string, qu
   // This matches tasks that are Pending but where the assignee has marked them as done.
   const filters = {
     $or: [
-      { 
-        author: authorId, 
+      {
+        author: authorId,
         assigned: assignedId,
-        "completedBy.userId": assignedId // Check if assignee is in completedBy
+        "completedBy.userId": assignedId, // Check if assignee is in completedBy
       },
       // If you enable bidirectional support later, use this:
-      // { 
-      //   author: assignedId, 
-      //   assigned: authorId, 
-      //   "completedBy.userId": authorId 
+      // {
+      //   author: assignedId,
+      //   assigned: authorId,
+      //   "completedBy.userId": authorId
       // }
     ],
-    status: 'pending'
+    status: "pending",
   };
 
   const taskQuery = new QueryBuilder(
@@ -561,7 +562,7 @@ const getNeedToFinishTasksBoth = async (authorId: string, assignedId: string, qu
   // Unread Count Logic
   const count = await getUnreadCount({ _id: authorId });
   const readCountMap = new Map(
-    count.map((c: any) => [c._id.toString(), c.unreadMessageCount])
+    count.map((c: any) => [c._id.toString(), c.unreadMessageCount]),
   );
 
   const result = data2.map((task: any) => {
@@ -577,7 +578,11 @@ const getNeedToFinishTasksBoth = async (authorId: string, assignedId: string, qu
   };
 };
 
-const getcompleteTasksBoth = async (authorId: string, assignedId: string, queryParams: Record<string, any>) => {
+const getcompleteTasksBoth = async (
+  authorId: string,
+  assignedId: string,
+  queryParams: Record<string, any>,
+) => {
   const [authorExists, assignedExists] = await Promise.all([
     User.exists({ _id: authorId }),
     User.exists({ _id: assignedId }),
@@ -588,8 +593,8 @@ const getcompleteTasksBoth = async (authorId: string, assignedId: string, queryP
   }
 
   // Get the start and end of the current day to check the history array
-  const startOfDay = moment().startOf('day').toDate();
-  const endOfDay = moment().endOf('day').toDate();
+  const startOfDay = moment().startOf("day").toDate();
+  const endOfDay = moment().endOf("day").toDate();
 
   // FIX: Advanced query for completed status + recurring history
   const filters = {
@@ -631,7 +636,7 @@ const getcompleteTasksBoth = async (authorId: string, assignedId: string, queryP
   // Unread Count Logic
   const count = await getUnreadCount({ _id: authorId });
   const readCountMap = new Map(
-    count.map((c: any) => [c._id.toString(), c.unreadMessageCount])
+    count.map((c: any) => [c._id.toString(), c.unreadMessageCount]),
   );
 
   const result = data2.map((task: any) => {
@@ -647,16 +652,17 @@ const getcompleteTasksBoth = async (authorId: string, assignedId: string, queryP
   };
 };
 
-
-const getDueTasksByUser = async (assignedId: string, queryParams: Record<string, any>) => {
+const getDueTasksByUser = async (
+  assignedId: string,
+  queryParams: Record<string, any>,
+) => {
   const todayStart = moment().startOf("day").toDate();
   const tomorrowStart = moment().add(1, "day").startOf("day").toDate();
 
-    // Check if date range is provided in queryParams
+  // Check if date range is provided in queryParams
   const { start, end } = queryParams.dateRange || {};
-  const startDate = start ? moment(start).startOf('day').toDate() : null;
-  const endDate = end ? moment(end).endOf('day').toDate() : null;
-
+  const startDate = start ? moment(start).startOf("day").toDate() : null;
+  const endDate = end ? moment(end).endOf("day").toDate() : null;
 
   const query: {
     assigned: string;
@@ -679,7 +685,6 @@ const getDueTasksByUser = async (assignedId: string, queryParams: Record<string,
   // if (endDate) {
   //   query.dueDate.$lte = endDate; // Add $lte for endDate
   // }
-
 
   // Use the QueryBuilder to build the query
   const taskQuery = new QueryBuilder(
@@ -707,7 +712,7 @@ const getDueTasksByUser = async (assignedId: string, queryParams: Record<string,
   });
   const result = data.map((task: any) => {
     const unreadCount = readCount.find(
-      (c: any) => c._id.toString() === task._id.toString()
+      (c: any) => c._id.toString() === task._id.toString(),
     );
     return {
       ...task.toObject(),
@@ -721,8 +726,10 @@ const getDueTasksByUser = async (assignedId: string, queryParams: Record<string,
   };
 };
 
-
-const getUpcommingTaskByUser = async (assignedId: string, queryParams: Record<string, any>) => {
+const getUpcommingTaskByUser = async (
+  assignedId: string,
+  queryParams: Record<string, any>,
+) => {
   const tomorrowStart = moment().add(1, "days").startOf("day").toDate();
   // Get the date three days from now and set to the end of that day
   // const threeDaysFromNowEnd = moment().add(7, "days").endOf("day").toDate();
@@ -750,27 +757,27 @@ const getUpcommingTaskByUser = async (assignedId: string, queryParams: Record<st
     .fields(); // Include any specific fields you need
 
   const meta = await taskQuery.countTotal(); // Get metadata (e.g., total count)
-   const data = await taskQuery.modelQuery; // Get the query result
+  const data = await taskQuery.modelQuery; // Get the query result
 
-   // Execute the query to fetch the tasks
-   const count = await getSingleUserUnreadCount({
-     _id: assignedId,
-   });
-   const readCount = count.map((c: any) => {
-     return {
-       _id: c._id,
-       unreadMessageCount: c.unreadMessageCount,
-     };
-   });
-   const result = data.map((task: any) => {
-     const unreadCount = readCount.find(
-       (c: any) => c._id.toString() === task._id.toString()
-     );
-     return {
-       ...task.toObject(),
-       unreadMessageCount: unreadCount ? unreadCount.unreadMessageCount : 0,
-     };
-   });
+  // Execute the query to fetch the tasks
+  const count = await getSingleUserUnreadCount({
+    _id: assignedId,
+  });
+  const readCount = count.map((c: any) => {
+    return {
+      _id: c._id,
+      unreadMessageCount: c.unreadMessageCount,
+    };
+  });
+  const result = data.map((task: any) => {
+    const unreadCount = readCount.find(
+      (c: any) => c._id.toString() === task._id.toString(),
+    );
+    return {
+      ...task.toObject(),
+      unreadMessageCount: unreadCount ? unreadCount.unreadMessageCount : 0,
+    };
+  });
 
   return {
     meta,
@@ -778,12 +785,14 @@ const getUpcommingTaskByUser = async (assignedId: string, queryParams: Record<st
   };
 };
 
-
-const getImportantTaskByUser = async (userId: string, queryParams: Record<string, any>) => {
+const getImportantTaskByUser = async (
+  userId: string,
+  queryParams: Record<string, any>,
+) => {
   const query = {
-    importantBy: userId, 
-    status: "pending",       
-    ...queryParams,          
+    importantBy: userId,
+    status: "pending",
+    ...queryParams,
   };
 
   // 2. Pass the query to your QueryBuilder
@@ -795,10 +804,10 @@ const getImportantTaskByUser = async (userId: string, queryParams: Record<string
     .filter(queryParams)
     .paginate()
     .sort()
-    .fields(); 
+    .fields();
 
-  const meta = await taskQuery.countTotal(); 
-  const data = await taskQuery.modelQuery; 
+  const meta = await taskQuery.countTotal();
+  const data = await taskQuery.modelQuery;
 
   // 3. Fetch unread counts
   const count = await getSingleUserUnreadCount({
@@ -815,7 +824,7 @@ const getImportantTaskByUser = async (userId: string, queryParams: Record<string
   // 4. Map the results
   const result = data.map((task: any) => {
     const unreadCount = readCount.find(
-      (c: any) => c._id.toString() === task._id.toString()
+      (c: any) => c._id.toString() === task._id.toString(),
     );
     return {
       ...task.toObject(),
@@ -829,8 +838,10 @@ const getImportantTaskByUser = async (userId: string, queryParams: Record<string
   };
 };
 
-
-const getAssignedTaskByUser = async (authorId: string, queryParams: Record<string, any>) => {
+const getAssignedTaskByUser = async (
+  authorId: string,
+  queryParams: Record<string, any>,
+) => {
   // const tomorrowStart = moment().add(1, "days").startOf("day").toDate();
   // const sevenDaysFromNowEnd = moment().add(7, "days").endOf("day").toDate();
 
@@ -853,33 +864,33 @@ const getAssignedTaskByUser = async (authorId: string, queryParams: Record<strin
 
   const meta = await taskQuery.countTotal(); // Get metadata (e.g., total count)
 
-   const data = await taskQuery.modelQuery; // Get the query result
-   // Execute the query to fetch the tasks
-   const count = await getSingleUserUnreadCount({
-     _id: authorId,
-     type: "author"
-   });
-   const readCount = count.map((c: any) => {
-     return {
-       _id: c._id,
-       unreadMessageCount: c.unreadMessageCount,
-     };
-   });
-   const result = data.map((task: any) => {
-     const unreadCount = readCount.find(
-       (c: any) => c._id.toString() === task._id.toString()
-     );
-     return {
-       ...task.toObject(),
-       unreadMessageCount: unreadCount ? unreadCount.unreadMessageCount : 0,
-     };
-   });
+  const data = await taskQuery.modelQuery; // Get the query result
+  // Execute the query to fetch the tasks
+  const count = await getSingleUserUnreadCount({
+    _id: authorId,
+    type: "author",
+  });
+  const readCount = count.map((c: any) => {
+    return {
+      _id: c._id,
+      unreadMessageCount: c.unreadMessageCount,
+    };
+  });
+  const result = data.map((task: any) => {
+    const unreadCount = readCount.find(
+      (c: any) => c._id.toString() === task._id.toString(),
+    );
+    return {
+      ...task.toObject(),
+      unreadMessageCount: unreadCount ? unreadCount.unreadMessageCount : 0,
+    };
+  });
 
   return {
     meta,
     result,
   };
-}
+};
 
 const getTodaysTaskByUser = async (userid: string) => {
   const todayStart = moment().startOf("day").toDate();
@@ -901,34 +912,33 @@ const getTodaysTaskByUser = async (userid: string) => {
     .populate("author assigned company") // Adjust based on your schema
     .exec();
 
-
-     // Execute the query to fetch the tasks
-     const count = await getSingleUserUnreadCount({
-       _id: userid,
-     });
-     const readCount = count.map((c: any) => {
-       return {
-         _id: c._id,
-         unreadMessageCount: c.unreadMessageCount,
-       };
-     });
-     const result = data.map((task: any) => {
-       const unreadCount = readCount.find(
-         (c: any) => c._id.toString() === task._id.toString()
-       );
-       return {
-         ...task.toObject(),
-         unreadMessageCount: unreadCount ? unreadCount.unreadMessageCount : 0,
-       };
-     });
-// console.log(result)
+  // Execute the query to fetch the tasks
+  const count = await getSingleUserUnreadCount({
+    _id: userid,
+  });
+  const readCount = count.map((c: any) => {
+    return {
+      _id: c._id,
+      unreadMessageCount: c.unreadMessageCount,
+    };
+  });
+  const result = data.map((task: any) => {
+    const unreadCount = readCount.find(
+      (c: any) => c._id.toString() === task._id.toString(),
+    );
+    return {
+      ...task.toObject(),
+      unreadMessageCount: unreadCount ? unreadCount.unreadMessageCount : 0,
+    };
+  });
+  // console.log(result)
   return result;
 };
 
 const getTasksForPlannerByMonth = async (
   year: string,
   month: string,
-  assigned: string
+  assigned: string,
 ) => {
   const startDate = moment(`${year}-${month}-01`).startOf("month").toDate();
   const endDate = moment(startDate).endOf("month").toDate();
@@ -941,20 +951,17 @@ const getTasksForPlannerByMonth = async (
 
     status: "pending",
     ...(assigned && { assigned }), // Filter by assigned user if provided
-  }).populate('author', 'name') // Populate only the name field from the author
-  .populate('assigned', 'name');
+  })
+    .populate("author", "name") // Populate only the name field from the author
+    .populate("assigned", "name");
   return tasks;
 };
-
-
 
 const getTasksForPlannerByWeek = async (
   year: string,
   week: string,
-  assigned: string // Optional parameter for filtering by user
+  assigned: string, // Optional parameter for filtering by user
 ) => {
-
-  
   // Parse the week and year as numbers
   const weekNumber = parseInt(week, 10);
   const yearNumber = parseInt(year, 10);
@@ -962,7 +969,7 @@ const getTasksForPlannerByWeek = async (
   // Validate week number
   if (isNaN(weekNumber) || weekNumber < 1 || weekNumber > 53) {
     throw new Error(
-      "Invalid week number. Please provide a number between 1 and 53."
+      "Invalid week number. Please provide a number between 1 and 53.",
     );
   }
 
@@ -979,13 +986,13 @@ const getTasksForPlannerByWeek = async (
 
   // const startDate = moment().year(yearNumber).week(weekNumber).startOf("isoWeek").subtract(1, 'days').toDate();
 
-  const startDate = moment().year(yearNumber).isoWeek(weekNumber).startOf("isoWeek").toDate();
-
-
+  const startDate = moment()
+    .year(yearNumber)
+    .isoWeek(weekNumber)
+    .startOf("isoWeek")
+    .toDate();
 
   const endDate = moment(startDate).endOf("isoWeek").toDate();
-
-  
 
   // Fetch tasks from the database
   // const tasks = await Task.find({
@@ -1006,14 +1013,15 @@ const getTasksForPlannerByWeek = async (
 
     status: "pending",
     ...(assigned && { assigned }), // Filter by assigned user if provided
-  }).populate('author', 'name') // Populate only the name field from the author
-  .populate('assigned', 'name');
+  })
+    .populate("author", "name") // Populate only the name field from the author
+    .populate("assigned", "name");
   return tasks;
 };
 
 const getTasksForPlannerByDay = async (
   date: string,
-  assigned?: string // Optional parameter for filtering by user
+  assigned?: string, // Optional parameter for filtering by user
 ) => {
   const targetDate = moment(date).startOf("day").toDate();
   const endDate = moment(targetDate).endOf("day").toDate();
@@ -1033,7 +1041,7 @@ const getTasksForPlannerByDay = async (
 const updateReadComment = async (
   taskId: string,
   userId: string,
-  messageId: string
+  messageId: string,
 ) => {
   // Fetch the group by ID
   const task = await Task.findById(taskId);
@@ -1048,9 +1056,7 @@ const updateReadComment = async (
   }
 
   // Check if the user is a member of the group
-  const isMember = task.lastSeen?.find(
-    (t) => t.userId?.toString() === userId
-  );
+  const isMember = task.lastSeen?.find((t) => t.userId?.toString() === userId);
   if (!isMember) {
     throw new AppError(httpStatus.BAD_REQUEST, "User is not a member");
   }
@@ -1087,5 +1093,5 @@ export const TaskServices = {
   getcompleteTasksBoth,
   getAssignedTaskByUser,
   getNeedToFinishTasks,
-  getImportantTaskByUser
+  getImportantTaskByUser,
 };
