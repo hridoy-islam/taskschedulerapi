@@ -8,6 +8,7 @@ import express, { Application, Request, Response } from "express";
 import globalErrorHandler from "./app/middlewares/globalErrorhandler";
 import notFound from "./app/middlewares/notFound";
 import router from "./app/routes";
+import { scheduleTaskCronJob } from "./app/utils/Scheduletaskcron";
 
 const app: Application = express();
 const Pusher = require("pusher");
@@ -20,6 +21,8 @@ const pusher = new Pusher({
   useTLS: true,
 });
 
+
+scheduleTaskCronJob();
 pusher.trigger("my-channel", "my-event", {
   message: "hello world",
 });

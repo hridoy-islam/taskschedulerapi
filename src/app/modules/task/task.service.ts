@@ -10,20 +10,82 @@ import mongoose from "mongoose";
 import { Comment } from "../comment/comment.model";
 import { NotificationService } from "../notification/notification.service";
 import { getIO } from "../../../socket";
+import { ScheduleTask } from "../scheduleTask/scheduleTask.model";
+
+
+
+
+const handleRecurringTask = async (task: any, originalPayload: any) => {
+  try {
+    // 1. Check for the boolean flag
+    const isRec = originalPayload?.isRecurring || originalPayload?.IsRecurring || task?.isRecurring || task?.IsRecurring;
+
+    if (!isRec) {
+      // If false, just exit quietly
+      return;
+    }
+
+    // 2. Safely map payload and ensure undefined is passed instead of null for numbers
+    const schedulePayload = {
+      taskName: originalPayload.taskName || task.taskName,
+      description: originalPayload.description || task.description,
+      author: task.author, // from the created task to ensure it's an ObjectId
+      assigned: task.assigned, // from the created task
+      company: task.company || null,
+      status: originalPayload.status || task.status || "pending",
+      priority: originalPayload.priority || task.priority || "low",
+      dueDate: originalPayload.dueDate || task.dueDate,
+      isRecurring: true, // Force to boolean true
+      frequency: originalPayload.frequency || task.frequency || "once",
+      scheduledAt: originalPayload.scheduledAt || task.scheduledAt,
+      scheduledDate: originalPayload.scheduledDate || task.scheduledDate || undefined,
+    };
+
+    // 3. Check if this exact schedule already exists
+    const exists = await ScheduleTask.findOne({
+      taskName: schedulePayload.taskName,
+      author: schedulePayload.author,
+    });
+
+    if (exists) {
+
+      await ScheduleTask.updateOne(
+        { _id: exists._id },
+        { $set: schedulePayload }
+      );
+     
+      return { success: true, message: "Schedule task updated!" };
+    }
+
+    // 🆕 CREATE NEW
+    const newSchedule = await ScheduleTask.create(schedulePayload);
+    
+    
+    return { success: true, message: "Schedule task created!" };
+
+  } catch (error) {
+   
+    console.error(" Error creating schedule:", error);
+  }
+};
+
 
 const createTaskIntoDB = async (payload: TTask) => {
   const author = await User.findById(payload.author);
   const assigned = await User.findById(payload.assigned);
+  
   if (!author || !assigned) {
     return null;
   }
 
+  // Company Logic
   if (author._id.toString() === assigned._id.toString()) {
     payload.company = null;
   } else {
     payload.company = assigned.company;
   }
 
+  // Setup LastSeen array
   const lastSeen = [
     {
       _id: new mongoose.Types.ObjectId(),
@@ -36,23 +98,26 @@ const createTaskIntoDB = async (payload: TTask) => {
       lastSeenId: null,
     },
   ];
-
   payload.lastSeen = lastSeen;
 
+  // 1. Create the Task
   const result = await Task.create(payload);
 
+  // 2. Handle Recurring Logic (New Addition)
+await handleRecurringTask(result, payload);
+
+  // 3. Notification Logic
   if (author._id.toString() !== assigned._id.toString()) {
     const notification = await NotificationService.createNotificationIntoDB({
-      userId: assigned._id, // User receiving the notification
-      senderId: author._id, // User creating the task
+      userId: assigned._id,
+      senderId: author._id,
       type: "task",
       message: `${author.name} assigned a new task "${result.taskName}"`,
       docId: result._id.toString(),
     });
 
-    // Step 3: Send the notification in real-time using WebSocket
     const io = getIO();
-    const assignedId = assigned._id.toString(); // Convert ObjectId to string
+    const assignedId = assigned._id.toString();
     io.to(assignedId).emit("notification", notification);
   }
 
@@ -223,55 +288,11 @@ const updateTaskIntoDB = async (id: string, payload: Partial<TTask>) => {
     }
   }
 
-  // ------------------------------------------------
-  // 3️⃣ RECURRING TASK LOGIC
-  // ------------------------------------------------
 
-  const finalStatus = payload.status || existingTask.status;
 
-  if (
-    finalStatus === "completed" &&
-    existingTask.frequency &&
-    existingTask.frequency !== "once"
-  ) {
-    const currentDueDate = moment(existingTask.dueDate || new Date());
-    let nextDueDate = currentDueDate.clone();
 
-    switch (existingTask.frequency) {
-      case "daily":
-        nextDueDate.add(1, "days");
-        break;
-
-      case "weekly":
-        nextDueDate.add(1, "weeks");
-        break;
-
-      case "monthly":
-        nextDueDate.add(1, "months");
-        if (existingTask.scheduledDate) {
-          nextDueDate.date(existingTask.scheduledDate);
-        }
-        break;
-    }
-
-    updateQuery.$push = {
-      ...(updateQuery.$push || {}),
-      history: {
-        date: new Date(),
-        completed: true,
-      },
-    };
-
-    updateQuery.$set.status = "pending";
-    updateQuery.$set.dueDate = nextDueDate.toISOString();
-
-    // reset for next cycle
-    updateQuery.$set.completedBy = [];
-  }
-
-  // ------------------------------------------------
-  // 4️⃣ FINAL UPDATE
-  // ------------------------------------------------
+  
+ 
 
   const result = await Task.findByIdAndUpdate(id, updateQuery, {
     new: true,
@@ -607,14 +628,8 @@ const getcompleteTasksBoth = async (
       },
       {
         $or: [
-          { status: "completed" }, // 1. Catch standard one-time tasks that are fully completed
-          {
-            history: {
-              $elemMatch: {
-                completed: true,
-              },
-            },
-          },{
+          { status: "completed" }, 
+         {
             "completedBy.userId": authorId
           }
         ],

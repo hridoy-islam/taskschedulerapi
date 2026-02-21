@@ -11,6 +11,7 @@ import { NotificationsRoutes } from "../modules/notification/notification.route"
 import { UploadDocumentRoutes } from "../modules/documents/documents.route";
 import { CompanyReportRoutes } from "../modules/companyReport/companyReport.router";
 import { SubscriptionPlanRoutes } from "../modules/subscriptionPlan/subscriptionPlan.router";
+import { ScheduleTaskRoutes } from "../modules/scheduleTask/scheduleTask.route";
 
 const router = Router();
 
@@ -62,6 +63,10 @@ const moduleRoutes = [
     {
     path: "/subscription-plans",
     route: SubscriptionPlanRoutes,
+  },
+    {
+    path: "/schedule-task",
+    route: ScheduleTaskRoutes,
   },
 ];
 
