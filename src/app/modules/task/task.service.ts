@@ -1060,33 +1060,50 @@ const updateReadComment = async (
   userId: string,
   messageId: string,
 ) => {
-  // Fetch the group by ID
   const task = await Task.findById(taskId);
   if (!task) {
-    throw new AppError(httpStatus.NOT_FOUND, "Group Not Found");
+    throw new AppError(httpStatus.NOT_FOUND, "Task Not Found");
   }
 
-  // Fetch the user by ID
   const user = await User.findById(userId);
   if (!user) {
     throw new AppError(httpStatus.NOT_FOUND, "User Not Found");
   }
 
-  // Check if the user is a member of the group
-  const isMember = task.lastSeen?.find((t) => t.userId?.toString() === userId);
-  if (!isMember) {
-    throw new AppError(httpStatus.BAD_REQUEST, "User is not a member");
+  // ✅ Handles both populated object and raw ObjectId
+  const toId = (field: any): string => {
+    if (!field) return '';
+    return typeof field === 'object' && field._id
+      ? field._id.toString()
+      : field.toString();
+  };
+
+  const isAuthor = toId(task.author) === userId;
+  const isAssigned = toId((task as any).assigned) === userId;
+
+  if (!isAuthor && !isAssigned) {
+    throw new AppError(httpStatus.FORBIDDEN, "User is not related to this task");
   }
 
-  // Update the user's last read message in the group
-  task.lastSeen = task.lastSeen?.map((member) => {
-    if (member.userId?.toString() === userId) {
-      member.lastSeenId = new mongoose.Types.ObjectId(messageId);
-    }
-    return member;
-  });
+  // Upsert lastSeen
+  const isMember = task.lastSeen?.find((t) => t.userId?.toString() === userId);
 
-  // Save the updated group
+  if (isMember) {
+    task.lastSeen = task.lastSeen?.map((member) => {
+      if (member.userId?.toString() === userId) {
+        member.lastSeenId = new mongoose.Types.ObjectId(messageId);
+      }
+      return member;
+    });
+  } else {
+    if (!task.lastSeen) task.lastSeen = [];
+    task.lastSeen.push({
+      _id: new mongoose.Types.ObjectId(),
+      userId: new mongoose.Types.ObjectId(userId),
+      lastSeenId: new mongoose.Types.ObjectId(messageId),
+    });
+  }
+
   const result = await task.save();
   return result;
 };
